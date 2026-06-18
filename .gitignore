@@ -1,0 +1,11 @@
+.next
+node_modules
+.npm-cache
+.npmrc
+AGENTS.md
+design-qa.md
+.tools
+dist
+out
+.DS_Store
+*.log

@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  margin: 0;
+  background: #f3f8f5;
+  color: #0c2f28;
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-line bg-white shadow-soft;
+  }
+
+  .field {
+    @apply h-10 rounded-md border border-line bg-white px-3 text-sm outline-none transition focus:border-money focus:ring-2 focus:ring-emerald-100;
+  }
+
+  .btn-primary {
+    @apply inline-flex h-10 items-center gap-2 rounded-md bg-money px-4 text-sm font-semibold text-white transition hover:bg-emerald-700;
+  }
+
+  .btn-ghost {
+    @apply inline-flex h-9 items-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50;
+  }
+}
