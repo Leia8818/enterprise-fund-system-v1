@@ -7,5 +7,9 @@ design-qa.md
 .tools
 dist
 out
+data/
 .DS_Store
 *.log
+
+.netlify
+*.zip

@@ -42,4 +42,16 @@ textarea {
   .btn-ghost {
     @apply inline-flex h-9 items-center gap-2 rounded-md border border-line bg-white px-3 text-sm font-medium text-slate-700 transition hover:bg-slate-50;
   }
+
+  .toolbar-btn {
+    @apply inline-flex h-9 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-bold text-slate-700 transition hover:bg-white hover:text-money hover:shadow-sm;
+  }
+
+  .toolbar-link {
+    @apply inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl border border-emerald-100 bg-white px-3 text-sm font-bold text-slate-700 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-money;
+  }
+
+  .toolbar-primary {
+    @apply inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-money px-4 text-sm font-bold text-white shadow-sm shadow-emerald-900/10 transition hover:bg-emerald-700;
+  }
 }

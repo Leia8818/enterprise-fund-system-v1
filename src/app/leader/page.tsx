@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -9,6 +10,8 @@ import {
   ClipboardList,
   HandCoins,
   Landmark,
+  LogOut,
+  QrCode,
   ShieldAlert,
   UserRound,
   WalletCards,
@@ -25,12 +28,23 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, warningRows } from "@/lib/calculations";
+import { logout, requireLogin, type LoginSession } from "@/lib/auth";
+import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function LeaderPage() {
+  const [session, setSession] = useState<LoginSession | null>(null);
   const store = useFundStore(seedState);
+
+  useEffect(() => {
+    setSession(requireLogin("/leader"));
+  }, []);
+
+  if (!session) {
+    return <div className="flex min-h-screen items-center justify-center bg-[#f3f8f5] text-sm font-semibold text-slate-500">正在进入登录入口...</div>;
+  }
+
   const budgets = budgetRows(store.state);
   const cash = cashRows(store.state);
   const loans = loanRows(store.state);
@@ -45,7 +59,7 @@ export default function LeaderPage() {
       executionRate: row.executionRate,
     }));
   const selfFundBudgets = budgets
-    .filter((row) => ["会员费", "保险费", "办公费", "房租", "交通费", "物流运输"].includes(row.category) && row.topic)
+    .filter((row) => ["会员费", "保险费", "办公费", "房租", "交通费", "物流运输"].includes(row.category))
     .map((row) => ({
       id: row.id,
       category: row.category,
@@ -85,10 +99,18 @@ export default function LeaderPage() {
             <div className="rounded-lg bg-slate-50 px-4 py-2 text-sm text-slate-600">
               数据更新时间：{formatDate(new Date().toISOString())}
             </div>
+            <Link className="btn-ghost" href="/login?next=%2Fleader">
+              <QrCode className="h-4 w-4" />
+              扫码入口
+            </Link>
             <Link className="btn-ghost" href="/">
               <ArrowLeft className="h-4 w-4" />
               返回工作台
             </Link>
+            <button className="btn-ghost" onClick={logout}>
+              <LogOut className="h-4 w-4" />
+              退出
+            </button>
           </div>
         </div>
       </header>
@@ -196,7 +218,7 @@ export default function LeaderPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-xs text-slate-500">
                 <tr>
-                  {["日期", "部门", "项目", "业务类型", "人员", "金额", "状态"].map((item) => (
+                  {["日期", "部门", "项目", "资金类别", "收支类型", "经办人", "金额", "状态"].map((item) => (
                     <th key={item} className="border-b border-line px-4 py-4 text-left text-base font-extrabold tracking-wide text-slate-700">{item}</th>
                   ))}
                 </tr>
@@ -207,9 +229,12 @@ export default function LeaderPage() {
                     <td className="whitespace-nowrap px-4 py-3">{formatDate(row.date)}</td>
                     <td className="whitespace-nowrap px-4 py-3">{row.department}</td>
                     <td className="whitespace-nowrap px-4 py-3">{row.project}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{row.fundSource}</td>
                     <td className="whitespace-nowrap px-4 py-3">{row.businessType}</td>
                     <td className="whitespace-nowrap px-4 py-3">{row.person}</td>
-                    <td className="whitespace-nowrap px-4 py-3 font-bold text-ink">{formatCurrency(row.amount)}</td>
+                    <td className={transactionSignedAmount(row) < 0 ? "whitespace-nowrap px-4 py-3 font-bold text-red-600" : "whitespace-nowrap px-4 py-3 font-bold text-emerald-700"}>
+                      {transactionSignedAmount(row) < 0 ? "-" : "+"}{formatCurrency(Math.abs(transactionSignedAmount(row)))}
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">{row.status}</span>
                     </td>
@@ -223,7 +248,7 @@ export default function LeaderPage() {
         <section className="grid grid-cols-4 gap-4">
           <SmallStat label="课题劳务费余额" value={formatCurrency(dashboard.laborFundBalance)} icon={UserRound} />
           <SmallStat label="部门资金余额" value={formatCurrency(dashboard.departmentFundBalance)} icon={Landmark} />
-          <SmallStat label="待审批事项" value={`${dashboard.pendingCount} 项`} icon={ClipboardList} />
+          <SmallStat label="本月收入" value={formatCurrency(dashboard.monthlyIncome)} icon={ClipboardList} />
           <SmallStat label="备用金结清率" value={`${cash.length ? (((cash.filter((item) => item.balance <= 0).length / cash.length) * 100)).toFixed(1) : "0.0"}%`} icon={WalletCards} />
         </section>
       </div>

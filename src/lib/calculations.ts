@@ -10,20 +10,18 @@ import type {
 } from "@/lib/types";
 import { byMonth, daysBetween, today } from "@/lib/utils";
 
-export const expenseTypes: BusinessType[] = [
-  "备用金使用",
-  "备用金核销",
-  "借款支出",
-  "劳务费发放",
-  "材料费支出",
-  "差旅费支出",
-  "专家费支出",
-  "设备费支出",
-  "其他支出",
-];
+export const expenseTypes: BusinessType[] = ["支出"];
+
+export function transactionSignedAmount(row: Transaction) {
+  return row.businessType === "支出" ? -Math.abs(row.amount) : Math.abs(row.amount);
+}
 
 function sumTransactions(transactions: Transaction[], predicate: (row: Transaction) => boolean) {
   return transactions.filter(predicate).reduce((sum, row) => sum + row.amount, 0);
+}
+
+function sumSignedTransactions(transactions: Transaction[], predicate: (row: Transaction) => boolean) {
+  return transactions.filter(predicate).reduce((sum, row) => sum + transactionSignedAmount(row), 0);
 }
 
 function matchesBudget(row: Transaction, budget: { department: string; project: string; topic: string; category: string }) {
@@ -59,7 +57,7 @@ export function cashRows(state: AppState): CashComputed[] {
 export function loanRows(state: AppState): LoanSummary[] {
   const map = new Map<string, Transaction[]>();
   state.transactions
-    .filter((row) => row.businessType === "借款支出" || row.businessType === "借款归还")
+    .filter((row) => row.fundSource === "借款")
     .forEach((row) => {
       const key = [row.person, row.department, row.project, row.topic, row.fundSource].join("|");
       map.set(key, [...(map.get(key) ?? []), row]);
@@ -67,8 +65,8 @@ export function loanRows(state: AppState): LoanSummary[] {
 
   return Array.from(map.entries()).map(([key, rows]) => {
     const [person, department, project, topic, fundSource] = key.split("|");
-    const borrows = rows.filter((row) => row.businessType === "借款支出");
-    const returns = rows.filter((row) => row.businessType === "借款归还");
+    const borrows = rows.filter((row) => row.businessType === "支出");
+    const returns = rows.filter((row) => row.businessType === "归还");
     const borrowAmount = borrows.reduce((sum, row) => sum + row.amount, 0);
     const returnedAmount = returns.reduce((sum, row) => sum + row.amount, 0);
     const latestBorrow = borrows.sort((a, b) => b.date.localeCompare(a.date))[0];
@@ -96,7 +94,7 @@ export function loanRows(state: AppState): LoanSummary[] {
 
 export function laborRows(state: AppState): LaborPayment[] {
   return state.transactions
-    .filter((row) => row.businessType === "劳务费发放")
+    .filter((row) => row.fundSource === "课题劳务费" && row.businessType === "支出")
     .map((row) => ({
       id: row.id,
       date: row.date,
@@ -213,24 +211,6 @@ export function warningRows(state: AppState, budgets: BudgetComputed[], cash: Ca
     }
   });
 
-  state.transactions
-    .filter((row) => row.status === "待审批")
-    .forEach((row) =>
-      warnings.push({
-        id: `warn-pending-${row.id}`,
-        type: "待审批事项",
-        department: row.department,
-        project: row.project,
-        topic: row.topic,
-        person: row.person,
-        amount: row.amount,
-        date: row.date,
-        overdueDays: 0,
-        status: "未处理",
-        remark: `${row.eventNo} 仍处于待审批状态。`,
-      }),
-    );
-
   return warnings.sort((a, b) => b.date.localeCompare(a.date));
 }
 
@@ -243,29 +223,30 @@ export function computeDashboard(
 ) {
   const totalBudget = budgets.reduce((sum, row) => sum + row.amount, 0);
   const usedBudget = budgets.reduce((sum, row) => sum + row.used, 0);
-  const departmentFundBalance =
-    sumTransactions(state.transactions, (row) => row.fundSource === "部门资金" && (row.businessType === "资金注入" || row.businessType === "借款归还")) -
-    sumTransactions(state.transactions, (row) => row.fundSource === "部门资金" && expenseTypes.includes(row.businessType));
-  const laborFundBalance =
-    sumTransactions(state.transactions, (row) => row.fundSource === "课题劳务费" && row.businessType === "资金注入") -
-    sumTransactions(state.transactions, (row) => row.fundSource === "课题劳务费" && row.businessType === "劳务费发放");
+  const totalBalance = sumSignedTransactions(state.transactions, () => true);
+  const departmentFundBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "其他");
+  const laborFundBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "课题劳务费");
+  const reserveBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "备用金");
   const months = Array.from({ length: 12 }, (_, index) => `2026-${String(index + 1).padStart(2, "0")}`);
   const monthlyTrend = months.map((month) => ({
     month: month.slice(5),
-    收入: sumTransactions(state.transactions, (row) => byMonth(row.date) === month && row.businessType === "资金注入"),
-    支出: sumTransactions(state.transactions, (row) => byMonth(row.date) === month && expenseTypes.includes(row.businessType)),
-    劳务费: sumTransactions(state.transactions, (row) => byMonth(row.date) === month && row.businessType === "劳务费发放"),
+    收入: sumTransactions(state.transactions, (row) => byMonth(row.date) === month && (row.businessType === "收入" || row.businessType === "归还")),
+    支出: sumTransactions(state.transactions, (row) => byMonth(row.date) === month && row.businessType === "支出"),
   }));
 
   return {
     totalBudget,
     usedBudget,
     remainingBudget: totalBudget - usedBudget,
+    totalBalance,
     departmentFundBalance,
     laborFundBalance,
+    reserveBalance,
     cashOutstanding: cash.reduce((sum, row) => sum + row.balance, 0),
     loanOutstanding: loans.reduce((sum, row) => sum + row.outstanding, 0),
-    pendingCount: state.transactions.filter((row) => row.status === "待审批").length,
+    monthlyIncome: sumTransactions(state.transactions, (row) => row.date.slice(0, 7) === today().slice(0, 7) && (row.businessType === "收入" || row.businessType === "归还")),
+    monthlyExpense: sumTransactions(state.transactions, (row) => row.date.slice(0, 7) === today().slice(0, 7) && row.businessType === "支出"),
+    pendingCount: 0,
     warningCount: warnings.length,
     monthlyTrend,
     recentTransactions: [...state.transactions].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10),
@@ -315,9 +296,9 @@ export function topicRows(state: AppState, budgets: BudgetComputed[]) {
   return state.dicts.topics.map((topic) => {
     const topicBudget = budgets.filter((row) => row.topic === topic.name);
     const budget = topicBudget.reduce((sum, row) => sum + row.amount, 0);
-    const labor = sumTransactions(state.transactions, (row) => row.topic === topic.name && row.businessType === "劳务费发放");
-    const other = sumTransactions(state.transactions, (row) => row.topic === topic.name && expenseTypes.includes(row.businessType) && row.businessType !== "劳务费发放");
-    const people = new Set(state.transactions.filter((row) => row.topic === topic.name && row.businessType === "劳务费发放").map((row) => row.person)).size;
+    const labor = sumTransactions(state.transactions, (row) => row.topic === topic.name && row.fundSource === "课题劳务费" && row.businessType === "支出");
+    const other = sumTransactions(state.transactions, (row) => row.topic === topic.name && row.businessType === "支出" && row.fundSource !== "课题劳务费");
+    const people = new Set(state.transactions.filter((row) => row.topic === topic.name && row.fundSource === "课题劳务费" && row.businessType === "支出").map((row) => row.person)).size;
     return {
       id: topic.id,
       topic: topic.name,

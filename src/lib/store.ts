@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AppState, Budget, CashAdvance, Transaction } from "@/lib/types";
-
-const STORAGE_KEY = "enterprise-fund-system-v1";
-const TRANSACTIONS_CLEARED_KEY = "enterprise-fund-system-v1-transactions-cleared";
-const BUSINESS_DATA_CLEARED_KEY = "enterprise-fund-system-v1-business-data-cleared";
+import type { AppState, Budget, CashAdvance, DictState, Transaction } from "@/lib/types";
 
 type CollectionKey = "transactions" | "budgets" | "cashAdvances";
 type CollectionMap = {
@@ -14,115 +10,136 @@ type CollectionMap = {
   cashAdvances: CashAdvance;
 };
 
+const STORAGE_KEY = "mgrass-fund-system-v1";
+
 export function useFundStore(initialState: AppState) {
-  const [state, setState] = useState<AppState>(initialState);
+  const [state, setLocalState] = useState<AppState>(initialState);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (raw) {
+    const saved = window.localStorage.getItem(STORAGE_KEY);
+    if (saved) {
       try {
-        const merged = mergeWithInitial(JSON.parse(raw) as AppState, initialState);
-        if (!window.localStorage.getItem(BUSINESS_DATA_CLEARED_KEY)) {
-          window.localStorage.setItem(BUSINESS_DATA_CLEARED_KEY, "true");
-          window.localStorage.setItem(TRANSACTIONS_CLEARED_KEY, "true");
-          setState({ ...merged, transactions: [], budgets: [], cashAdvances: [] });
-          return;
-        }
-        if (!window.localStorage.getItem(TRANSACTIONS_CLEARED_KEY)) {
-          window.localStorage.setItem(TRANSACTIONS_CLEARED_KEY, "true");
-          setState({ ...merged, transactions: [] });
-          return;
-        }
-        setState(merged);
+        setLocalState(normalizeState(JSON.parse(saved) as Partial<AppState>, initialState));
       } catch {
-        setState(initialState);
+        setLocalState(initialState);
       }
     }
+    setLoading(false);
   }, [initialState]);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
+    if (!loading) {
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+  }, [loading, state]);
+
+  function commit(next: AppState) {
+    setLocalState(next);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  }
 
   function upsert<K extends CollectionKey>(key: K, row: CollectionMap[K]) {
-    setState((current) => {
-      const collection = current[key] as unknown as CollectionMap[K][];
-      const exists = collection.some((item) => item.id === row.id);
-      return {
-        ...current,
-        [key]: exists ? collection.map((item) => (item.id === row.id ? row : item)) : [row, ...collection],
-      };
-    });
+    const normalizedRow = normalizeRow(key, row);
+    const nextRows = [
+      ...state[key].filter((item) => item.id !== row.id),
+      normalizedRow,
+    ];
+    commit({ ...state, [key]: nextRows } as AppState);
   }
 
   function remove(key: CollectionKey, id: string) {
-    setState((current) => ({
-      ...current,
-      [key]: (current[key] as Array<{ id: string }>).filter((item) => item.id !== id),
-    }));
+    commit({ ...state, [key]: state[key].filter((item) => item.id !== id) } as AppState);
+  }
+
+  function updateDicts(dicts: DictState) {
+    commit({ ...state, dicts });
   }
 
   function reset() {
-    window.localStorage.removeItem(STORAGE_KEY);
-    setState(initialState);
+    commit({ ...initialState, transactions: [], budgets: [], cashAdvances: [] });
   }
 
-  return { state, setState, upsert, remove, reset };
-}
+  function importState(next: Partial<AppState>) {
+    commit(normalizeState(next, initialState));
+  }
 
-function mergeById<T extends { id: string }>(current: T[], seed: T[]) {
-  const ids = new Set(current.map((item) => item.id));
-  return [...current, ...seed.filter((item) => !ids.has(item.id))];
-}
+  function archiveCompletedTransactions() {
+    const archivedAt = new Date().toISOString();
+    commit({
+      ...state,
+      transactions: state.transactions.map((row) =>
+        row.status === "已完成" ? { ...row, archived: true, archivedAt } : row,
+      ),
+    });
+  }
 
-function normalizeDepartmentName(name: string) {
-  const departmentMap: Record<string, string> = {
-    综合管理部: "施工项目部",
-    研发一部: "生产研发部",
-    研发二部: "生产研发部",
-    市场运营部: "对外合作部",
-  };
-  return departmentMap[name] ?? name;
-}
-
-function normalizeDepartmentField<T extends { department?: string }>(row: T): T {
-  return row.department ? { ...row, department: normalizeDepartmentName(row.department) } : row;
-}
-
-function normalizeProjectName(name: string) {
-  const projectMap: Record<string, string> = {
-    数字化平台建设: "部门课题自筹费",
-    AI智能平台: "播种课题",
-    品牌宣传项目: "机械展会",
-    部门日常运营: "部门管理费",
-  };
-  return projectMap[name] ?? name;
-}
-
-function normalizeProjectField<T extends { project?: string }>(row: T): T {
-  return row.project ? { ...row, project: normalizeProjectName(row.project) } : row;
-}
-
-function normalizeTopicField<T extends { topic?: string }>(row: T): T {
-  return typeof row.topic === "string" ? { ...row, topic: "" } : row;
-}
-
-function normalizeRow<T extends { department?: string; project?: string; topic?: string }>(row: T): T {
-  return normalizeTopicField(normalizeProjectField(normalizeDepartmentField(row)));
-}
-
-function mergeWithInitial(current: AppState, initial: AppState): AppState {
   return {
-    ...current,
-    transactions: mergeById(current.transactions ?? [], initial.transactions).map(normalizeRow),
-    budgets: mergeById(current.budgets ?? [], initial.budgets).map(normalizeRow),
-    cashAdvances: mergeById(current.cashAdvances ?? [], initial.cashAdvances).map(normalizeRow),
+    state,
+    loading,
+    upsert,
+    remove,
+    reset,
+    updateDicts,
+    setState: commit,
+    importState,
+    archiveCompletedTransactions,
+  };
+}
+
+function normalizeRow<K extends CollectionKey>(key: K, row: CollectionMap[K]): CollectionMap[K] {
+  if (key === "transactions") return normalizeTransaction(row as Transaction) as CollectionMap[K];
+  if (key === "cashAdvances") return { ...(row as CashAdvance), status: normalizeStatus((row as CashAdvance).status) } as CollectionMap[K];
+  return row;
+}
+
+function normalizeState(next: Partial<AppState>, fallback: AppState): AppState {
+  const transactions = Array.isArray(next.transactions) ? next.transactions.map(normalizeTransaction) : [];
+  const cashAdvances = Array.isArray(next.cashAdvances) ? next.cashAdvances.map((row) => ({ ...row, status: normalizeStatus(row.status) })) : [];
+  return {
+    transactions,
+    budgets: Array.isArray(next.budgets) ? next.budgets : [],
+    cashAdvances,
     dicts: {
-      departments: initial.dicts.departments,
-      projects: initial.dicts.projects,
-      topics: initial.dicts.topics,
-      people: mergeById(current.dicts?.people ?? [], initial.dicts.people).map(normalizeDepartmentField),
-      expenseCategories: Array.from(new Set([...(current.dicts?.expenseCategories ?? []), ...initial.dicts.expenseCategories])),
+      departments: next.dicts?.departments?.length ? next.dicts.departments : fallback.dicts.departments,
+      projects: next.dicts?.projects?.length ? next.dicts.projects : fallback.dicts.projects,
+      topics: Array.isArray(next.dicts?.topics) ? next.dicts.topics : fallback.dicts.topics,
+      people: next.dicts?.people?.length ? next.dicts.people : fallback.dicts.people,
+      expenseCategories: next.dicts?.expenseCategories?.length ? next.dicts.expenseCategories : fallback.dicts.expenseCategories,
     },
   };
+}
+
+function normalizeTransaction(row: Transaction): Transaction {
+  return {
+    ...row,
+    topic: "",
+    fundSource: normalizeFundSource(row.fundSource, row.businessType),
+    businessType: normalizeBusinessType(row.businessType),
+    status: normalizeStatus(row.status),
+    amount: Math.abs(Number(row.amount) || 0),
+    archived: Boolean(row.archived),
+  };
+}
+
+function normalizeFundSource(fundSource: string, businessType: string) {
+  if (fundSource === "课题劳务费" || fundSource === "备用金" || fundSource === "借款" || fundSource === "其他") return fundSource as Transaction["fundSource"];
+  if (businessType.includes("借款")) return "借款";
+  if (fundSource.includes("劳务费")) return "课题劳务费";
+  if (fundSource.includes("备用金")) return "备用金";
+  return "其他";
+}
+
+function normalizeBusinessType(businessType: string) {
+  if (businessType === "收入" || businessType === "支出" || businessType === "归还") return businessType as Transaction["businessType"];
+  if (businessType.includes("归还")) return "归还";
+  if (businessType.includes("注入") || businessType.includes("拨付") || businessType.includes("申领")) return "收入";
+  return "支出";
+}
+
+function normalizeStatus(status: string) {
+  if (status === "已支付" || status === "已完成" || status === "已归还") return status as Transaction["status"];
+  if (status.includes("归还")) return "已归还";
+  if (status.includes("完成") || status.includes("核销")) return "已完成";
+  return "已支付";
 }

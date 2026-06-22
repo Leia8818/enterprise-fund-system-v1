@@ -1,20 +1,6 @@
-export type FundSource = "部门资金" | "课题劳务费" | "备用金" | "其他资金";
+export type FundSource = "课题劳务费" | "备用金" | "借款" | "其他";
 
-export type BusinessType =
-  | "资金注入"
-  | "备用金申领"
-  | "备用金拨付"
-  | "备用金使用"
-  | "备用金归还"
-  | "备用金核销"
-  | "借款支出"
-  | "借款归还"
-  | "劳务费发放"
-  | "材料费支出"
-  | "差旅费支出"
-  | "专家费支出"
-  | "设备费支出"
-  | "其他支出";
+export type BusinessType = "收入" | "支出" | "归还";
 
 export type ExpenseCategory =
   | "劳务费"
@@ -37,17 +23,7 @@ export type ExpenseCategory =
   | "外包服务费"
   | "其他";
 
-export type Status =
-  | "草稿"
-  | "待审批"
-  | "已审批"
-  | "已拨付"
-  | "已支付"
-  | "使用中"
-  | "已核销"
-  | "已归还"
-  | "已完成"
-  | "已驳回";
+export type Status = "已支付" | "已完成" | "已归还";
 
 export type BudgetType = "部门预算" | "项目预算" | "课题预算";
 export type ProjectStatus = "未开始" | "进行中" | "已完成" | "暂停" | "取消";
@@ -70,6 +46,8 @@ export type Transaction = {
   voucherNo: string;
   attachmentUrl: string;
   remark: string;
+  archived?: boolean;
+  archivedAt?: string;
 };
 
 export type Budget = {
@@ -147,6 +125,26 @@ export type AppState = {
   budgets: Budget[];
   cashAdvances: CashAdvance[];
   dicts: DictState;
+};
+
+export type UserRole = "管理员" | "编辑" | "查看";
+
+export type SystemUser = {
+  id: string;
+  name: string;
+  role: UserRole;
+  status: "启用" | "停用";
+  createdAt: string;
+};
+
+export type OperationLog = {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  detail: string;
+  userName: string;
+  createdAt: string;
 };
 
 export type BudgetComputed = Budget & {
