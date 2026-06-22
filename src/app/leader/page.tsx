@@ -31,6 +31,7 @@ import { seedState } from "@/data/seed";
 import { BASE_PATH, logout, requireLogin, type LoginSession } from "@/lib/auth";
 import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
+import type { Transaction, Warning } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function LeaderPage() {
@@ -77,6 +78,9 @@ export default function LeaderPage() {
 
   return (
     <main className="min-h-screen bg-[#f3f8f5]">
+      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} />
+
+      <div className="hidden lg:block">
       <header className="border-b border-line bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-8 py-5">
           <div className="flex items-center gap-4">
@@ -252,7 +256,169 @@ export default function LeaderPage() {
           <SmallStat label="备用金结清率" value={`${cash.length ? (((cash.filter((item) => item.balance <= 0).length / cash.length) * 100)).toFixed(1) : "0.0"}%`} icon={WalletCards} />
         </section>
       </div>
+      </div>
     </main>
+  );
+}
+
+function MobileDecisionOverview({
+  dashboard,
+  warnings,
+  recentTransactions,
+}: {
+  dashboard: ReturnType<typeof computeDashboard>;
+  warnings: Warning[];
+  recentTransactions: Transaction[];
+}) {
+  const focusCards = [
+    { label: "总资金余额", value: formatCurrency(dashboard.totalBalance), tone: "text-emerald-700", icon: Landmark },
+    { label: "课题劳务费", value: formatCurrency(dashboard.laborFundBalance), tone: "text-green-700", icon: UserRound },
+    { label: "备用金余额", value: formatCurrency(dashboard.reserveBalance), tone: "text-purple-700", icon: WalletCards },
+    { label: "借款未归还", value: formatCurrency(dashboard.loanOutstanding), tone: "text-orange-700", icon: HandCoins },
+  ];
+  const monthCards = [
+    { label: "本月收入", value: `+${formatCurrency(dashboard.monthlyIncome)}`, tone: "text-emerald-700" },
+    { label: "本月支出", value: `-${formatCurrency(dashboard.monthlyExpense)}`, tone: "text-red-600" },
+  ];
+
+  return (
+    <section className="lg:hidden">
+      <div className="bg-[#064536] px-4 pb-8 pt-4 text-white">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-emerald-100">移动决策概览</div>
+            <h1 className="mt-2 text-2xl font-extrabold leading-tight">智能装备研究院<br />资金管理系统</h1>
+            <div className="mt-3 text-xs text-emerald-100">更新：{formatDate(new Date().toISOString())}</div>
+          </div>
+          <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-xl bg-white/95 px-2 shadow-sm">
+            <Image
+              src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`}
+              alt="蒙草 M·GRASS"
+              width={86}
+              height={44}
+              className="h-auto w-full object-contain"
+              priority
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-3xl bg-white/10 p-4 ring-1 ring-white/15">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-semibold text-emerald-100">当前资金余额</span>
+            <span className="rounded-full bg-white/15 px-2 py-1 text-xs font-bold">领导查看</span>
+          </div>
+          <div className="mt-2 text-4xl font-extrabold tracking-tight">{formatCurrency(dashboard.totalBalance)}</div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-2xl bg-white/10 p-3">
+              <div className="text-emerald-100">风险预警</div>
+              <div className="mt-1 text-2xl font-extrabold text-red-200">{dashboard.warningCount}</div>
+            </div>
+            <div className="rounded-2xl bg-white/10 p-3">
+              <div className="text-emerald-100">备用金未结清</div>
+              <div className="mt-1 text-2xl font-extrabold">{formatCurrency(dashboard.cashOutstanding)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="-mt-5 space-y-4 px-4 pb-8">
+        <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold text-ink">核心资金</h2>
+            <span className="text-xs font-semibold text-slate-500">按流水自动统计</span>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            {focusCards.map((card) => {
+              const Icon = card.icon;
+              return (
+                <div key={card.label} className="rounded-2xl bg-[#f4fbf7] p-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                    <Icon className={`h-4 w-4 ${card.tone}`} />
+                    {card.label}
+                  </div>
+                  <div className={`mt-2 text-lg font-extrabold ${card.tone}`}>{card.value}</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <h2 className="text-lg font-extrabold text-ink">本月收支</h2>
+          <div className="mt-3 grid grid-cols-2 gap-3">
+            {monthCards.map((card) => (
+              <div key={card.label} className="rounded-2xl border border-line p-4">
+                <div className="text-xs font-bold text-slate-500">{card.label}</div>
+                <div className={`mt-2 text-2xl font-extrabold ${card.tone}`}>{card.value}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-red-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold text-ink">重点风险</h2>
+            <span className="rounded-full bg-red-50 px-2 py-1 text-xs font-extrabold text-risk">{warnings.length} 项</span>
+          </div>
+          <div className="space-y-3">
+            {warnings.slice(0, 4).map((warning) => (
+              <div key={warning.id} className="rounded-2xl bg-red-50 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="rounded-full bg-risk px-2 py-1 text-xs font-bold text-white">{warning.type}</span>
+                  <span className="text-xs text-slate-500">{formatDate(warning.date)}</span>
+                </div>
+                <div className="mt-2 text-sm font-bold text-slate-800">{warning.remark}</div>
+                <div className="mt-1 text-xs text-slate-500">
+                  {warning.department || "-"} / {warning.project || "-"} / {warning.person || "-"}
+                </div>
+              </div>
+            ))}
+            {warnings.length === 0 && <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">当前暂无风险预警</div>}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-extrabold text-ink">最近资金动态</h2>
+            <span className="text-xs font-semibold text-slate-500">最近 5 条</span>
+          </div>
+          <div className="space-y-2">
+            {recentTransactions.slice(0, 5).map((row) => {
+              const signed = transactionSignedAmount(row);
+              return (
+                <div key={row.id} className="rounded-2xl border border-line p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-extrabold text-ink">{row.project || row.department}</div>
+                      <div className="mt-1 text-xs text-slate-500">{formatDate(row.date)} / {row.fundSource} / {row.businessType}</div>
+                    </div>
+                    <div className={signed < 0 ? "text-right text-base font-extrabold text-red-600" : "text-right text-base font-extrabold text-emerald-700"}>
+                      {signed < 0 ? "-" : "+"}{formatCurrency(Math.abs(signed))}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs font-semibold text-slate-500">{row.person || "未填写经办人"}</span>
+                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">{row.status}</span>
+                  </div>
+                </div>
+              );
+            })}
+            {recentTransactions.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">暂无资金流水</div>}
+          </div>
+        </section>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Link className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800" href="/">
+            <ArrowLeft className="h-4 w-4" />
+            工作台
+          </Link>
+          <button className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white" onClick={logout}>
+            <LogOut className="h-4 w-4" />
+            退出
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
