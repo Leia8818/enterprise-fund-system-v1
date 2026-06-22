@@ -66,7 +66,14 @@ export default function LeaderPage() {
 
   return (
     <main className="min-h-screen bg-[#f3f8f5]">
-      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} updatedAt={store.cloudUpdatedAt || store.lastSavedAt || new Date().toISOString()} />
+      <MobileDecisionOverview
+        dashboard={dashboard}
+        warnings={warnings}
+        recentTransactions={dashboard.recentTransactions}
+        updatedAt={store.cloudUpdatedAt || (hasBusinessData(store.state) ? store.lastSavedAt : "")}
+        cloudStatus={store.cloudStatus}
+        hasBusinessData={hasBusinessData(store.state)}
+      />
 
       <div className="hidden lg:block">
       <header className="border-b border-line bg-white">
@@ -246,11 +253,15 @@ function MobileDecisionOverview({
   warnings,
   recentTransactions,
   updatedAt,
+  cloudStatus,
+  hasBusinessData,
 }: {
   dashboard: ReturnType<typeof computeDashboard>;
   warnings: Warning[];
   recentTransactions: Transaction[];
   updatedAt: string;
+  cloudStatus: string;
+  hasBusinessData: boolean;
 }) {
   const focusCards = [
     { label: "总资金余额", value: formatCurrency(dashboard.totalBalance), tone: "text-emerald-700", icon: Landmark },
@@ -265,8 +276,9 @@ function MobileDecisionOverview({
 
   return (
     <section className="lg:hidden">
-      <div className="relative bg-[#064536] px-4 pb-8 pt-5 text-white">
-        <div className="absolute right-4 top-4 flex w-20 items-center justify-center">
+      <div className="relative overflow-hidden bg-[#064536] px-4 pb-8 pt-5 text-white">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-emerald-200/10" />
+        <div className="absolute right-4 top-4 flex w-16 items-center justify-center">
           <Image
             src={`${BASE_PATH}/brand/mgrass-logo-sidebar.png`}
             alt="蒙草 M·GRASS"
@@ -276,22 +288,26 @@ function MobileDecisionOverview({
             priority
           />
         </div>
-        <div className="mx-auto max-w-[280px] pt-14 text-center">
-          <div className="text-xs font-semibold text-emerald-100">资金决策概览</div>
-          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-wide">
+        <div className="relative mx-auto max-w-[300px] pt-12 text-center">
+          <div className="mx-auto inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-emerald-50 ring-1 ring-white/15">
+            {hasBusinessData ? "资金决策概览" : "暂无云端数据"}
+          </div>
+          <h1 className="mt-3 text-[27px] font-extrabold leading-tight tracking-wide">
             智能装备研究院
             <br />
             资金管理系统
           </h1>
-          <div className="mt-3 text-xs text-emerald-100">数据更新：{formatDate(updatedAt)}</div>
+          <div className="mt-3 text-xs font-semibold text-emerald-100">
+            {updatedAt ? `数据更新：${formatDate(updatedAt)}` : cloudStatus}
+          </div>
         </div>
 
-        <div className="mt-5 rounded-3xl bg-white/10 p-4 ring-1 ring-white/15">
+        <div className="relative mt-5 rounded-3xl bg-white/10 p-4 ring-1 ring-white/15">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-emerald-100">当前资金余额</span>
             <span className="rounded-full bg-emerald-300/15 px-2 py-1 text-xs font-bold text-emerald-100">仅查看</span>
           </div>
-          <div className="mt-2 text-4xl font-extrabold tracking-tight">{formatCurrency(dashboard.totalBalance)}</div>
+          <div className="mt-2 break-words text-[34px] font-extrabold leading-tight tracking-tight">{formatCurrency(dashboard.totalBalance)}</div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
             <div className="rounded-2xl bg-white/10 p-3">
               <div className="text-emerald-100">风险预警</div>
@@ -299,28 +315,37 @@ function MobileDecisionOverview({
             </div>
             <div className="rounded-2xl bg-white/10 p-3">
               <div className="text-emerald-100">备用金未结清</div>
-              <div className="mt-1 text-2xl font-extrabold">{formatCurrency(dashboard.cashOutstanding)}</div>
+              <div className="mt-1 break-words text-[22px] font-extrabold leading-tight">{formatCurrency(dashboard.cashOutstanding)}</div>
             </div>
           </div>
         </div>
       </div>
 
       <div className="-mt-5 space-y-4 px-4 pb-8">
+        {!hasBusinessData && (
+          <section className="rounded-3xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
+            <div className="text-base font-extrabold text-amber-800">暂无可展示数据</div>
+            <div className="mt-2 text-sm font-semibold leading-6 text-amber-700">
+              后台录入后点击“云端保存”，手机端刷新即可显示。
+            </div>
+          </section>
+        )}
+
         <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-lg font-extrabold text-ink">核心资金</h2>
-            <span className="text-xs font-semibold text-slate-500">按流水自动统计</span>
+            <span className="text-xs font-semibold text-slate-500">自动统计</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {focusCards.map((card) => {
               const Icon = card.icon;
               return (
-                <div key={card.label} className="rounded-2xl bg-[#f4fbf7] p-3">
+                <div key={card.label} className="min-w-0 rounded-2xl bg-[#f4fbf7] p-3">
                   <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-                    <Icon className={`h-4 w-4 ${card.tone}`} />
-                    {card.label}
+                    <Icon className={`h-4 w-4 shrink-0 ${card.tone}`} />
+                    <span className="truncate">{card.label}</span>
                   </div>
-                  <div className={`mt-2 text-lg font-extrabold ${card.tone}`}>{card.value}</div>
+                  <div className={`mt-2 break-words text-[17px] font-extrabold leading-tight ${card.tone}`}>{card.value}</div>
                 </div>
               );
             })}
@@ -331,9 +356,9 @@ function MobileDecisionOverview({
           <h2 className="text-lg font-extrabold text-ink">本月收支</h2>
           <div className="mt-3 grid grid-cols-2 gap-3">
             {monthCards.map((card) => (
-              <div key={card.label} className="rounded-2xl border border-line p-4">
+              <div key={card.label} className="min-w-0 rounded-2xl border border-line p-4">
                 <div className="text-xs font-bold text-slate-500">{card.label}</div>
-                <div className={`mt-2 text-2xl font-extrabold ${card.tone}`}>{card.value}</div>
+                <div className={`mt-2 break-words text-[22px] font-extrabold leading-tight ${card.tone}`}>{card.value}</div>
               </div>
             ))}
           </div>
@@ -372,11 +397,11 @@ function MobileDecisionOverview({
               return (
                 <div key={row.id} className="rounded-2xl border border-line p-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm font-extrabold text-ink">{row.project || row.department}</div>
                       <div className="mt-1 text-xs text-slate-500">{formatDate(row.date)} / {row.fundSource} / {row.businessType}</div>
                     </div>
-                    <div className={signed < 0 ? "text-right text-base font-extrabold text-red-600" : "text-right text-base font-extrabold text-emerald-700"}>
+                    <div className={signed < 0 ? "shrink-0 text-right text-base font-extrabold text-red-600" : "shrink-0 text-right text-base font-extrabold text-emerald-700"}>
                       {signed < 0 ? "-" : "+"}{formatCurrency(Math.abs(signed))}
                     </div>
                   </div>
@@ -403,6 +428,10 @@ function MobileDecisionOverview({
       </div>
     </section>
   );
+}
+
+function hasBusinessData(state: { transactions: unknown[]; budgets: unknown[]; cashAdvances: unknown[] }) {
+  return state.transactions.length > 0 || state.budgets.length > 0 || state.cashAdvances.length > 0;
 }
 
 function SmallStat({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {

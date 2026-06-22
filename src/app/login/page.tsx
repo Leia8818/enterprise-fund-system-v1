@@ -54,8 +54,8 @@ export default function LoginPage() {
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,#dff7ed,transparent_34%),linear-gradient(135deg,#f7fcf9,#eef7f2)] px-4 py-8 text-ink">
       <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-5xl flex-col justify-center gap-7">
         <section className="text-center">
-          <div className="mx-auto flex h-16 w-36 items-center justify-center rounded-2xl bg-white px-4 shadow-sm ring-1 ring-emerald-100">
-            <Image src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`} alt="蒙草 M·GRASS" width={136} height={74} className="h-auto w-full object-contain" priority />
+          <div className="mx-auto flex h-16 w-40 items-center justify-center">
+            <Image src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`} alt="蒙草 M·GRASS" width={150} height={82} className="h-auto w-full object-contain" priority />
           </div>
           <div className="mt-5 text-sm font-bold text-emerald-700">统一访问入口</div>
           <h1 className="mt-2 text-3xl font-extrabold tracking-wide text-[#064536] sm:text-4xl">智能装备研究院资金管理系统</h1>
