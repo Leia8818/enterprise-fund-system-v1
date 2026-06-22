@@ -16,7 +16,8 @@
 
 ## 功能模块
 
-- 前台查看入口：`/`、`/leader`
+- 展示扫码入口：`/`、`/show`
+- 前台查看入口：`/leader`
 - 后台管理入口：`/admin`
 - 后台登录入口：`/login`
 - Dashboard 经营总览
@@ -46,7 +47,7 @@
 
 ## 日常处理流程
 
-1. 打开前台查看页，查看决策概览和核心余额。
+1. 展示时打开 `/` 或 `/show`，现场扫码直接进入决策概览。
 2. 管理人员从 `/login` 登录后进入 `/admin` 后台。
 3. 进入“资金流水”，系统会显示字段完整/字段缺失数量。
 4. 新增或编辑流水时，金额只录入正数；系统按“收入/支出/归还”统一显示正负号。
@@ -60,10 +61,16 @@ npm install
 npm run dev
 ```
 
-电脑端打开：
+展示扫码页：
 
 ```text
 http://127.0.0.1:3000
+```
+
+备用展示地址：
+
+```text
+http://127.0.0.1:3000/show
 ```
 
 后台登录入口：
@@ -143,7 +150,8 @@ https://你的用户名.github.io/仓库名/login
 
 ```text
 public/brand/              品牌 Logo 资源
-src/app/page.tsx           前台查看入口
+src/app/page.tsx           展示扫码入口
+src/app/show/page.tsx      展示扫码页面
 src/app/admin/page.tsx     后台管理页面与模块入口
 src/app/login/page.tsx     后台登录与二维码入口
 src/app/leader/page.tsx    决策概览页面
