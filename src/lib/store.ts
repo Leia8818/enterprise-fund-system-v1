@@ -11,10 +11,12 @@ type CollectionMap = {
 };
 
 const STORAGE_KEY = "mgrass-fund-system-v1";
+const STORAGE_EVENT = "mgrass-fund-system-updated";
 
 export function useFundStore(initialState: AppState) {
   const [state, setLocalState] = useState<AppState>(initialState);
   const [loading, setLoading] = useState(true);
+  const [lastSavedAt, setLastSavedAt] = useState("");
 
   useEffect(() => {
     const saved = window.localStorage.getItem(STORAGE_KEY);
@@ -31,12 +33,40 @@ export function useFundStore(initialState: AppState) {
   useEffect(() => {
     if (!loading) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      setLastSavedAt(new Date().toISOString());
     }
   }, [loading, state]);
+
+  useEffect(() => {
+    function loadSavedState() {
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        setLocalState(normalizeState(JSON.parse(saved) as Partial<AppState>, initialState));
+      } catch {
+        setLocalState(initialState);
+      }
+    }
+
+    function handleStorage(event: StorageEvent) {
+      if (event.key === STORAGE_KEY) loadSavedState();
+    }
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(STORAGE_EVENT, loadSavedState);
+    window.addEventListener("focus", loadSavedState);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(STORAGE_EVENT, loadSavedState);
+      window.removeEventListener("focus", loadSavedState);
+    };
+  }, [initialState]);
 
   function commit(next: AppState) {
     setLocalState(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    setLastSavedAt(new Date().toISOString());
+    window.dispatchEvent(new Event(STORAGE_EVENT));
   }
 
   function upsert<K extends CollectionKey>(key: K, row: CollectionMap[K]) {
@@ -77,6 +107,8 @@ export function useFundStore(initialState: AppState) {
   return {
     state,
     loading,
+    lastSavedAt,
+    saveNow: () => commit(state),
     upsert,
     remove,
     reset,

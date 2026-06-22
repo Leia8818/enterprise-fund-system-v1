@@ -177,6 +177,7 @@ export default function Home() {
   }, [store.state]);
 
   const title = navItems.find((item) => item.key === view)?.label ?? "Dashboard";
+  const savedLabel = store.lastSavedAt ? new Date(store.lastSavedAt).toLocaleTimeString("zh-CN", { hour12: false }) : "未保存";
 
   if (!session) {
     return <div className="flex min-h-screen items-center justify-center bg-panel text-sm font-semibold text-slate-500">正在进入登录入口...</div>;
@@ -266,6 +267,13 @@ export default function Home() {
             <div className="hidden whitespace-nowrap rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-money ring-1 ring-emerald-100 xl:block">
               {session.userName} · {session.role}
             </div>
+            <button className="toolbar-primary" onClick={() => { store.saveNow(); setMessage("已保存并同步前台"); }} title="保存并同步前台">
+              <Settings className="h-4 w-4" />
+              <span>保存同步</span>
+            </button>
+            <div className="hidden whitespace-nowrap rounded-full bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500 ring-1 ring-line xl:block">
+              保存：{savedLabel}
+            </div>
             <div className="flex items-center rounded-xl border border-emerald-100 bg-emerald-50/70 p-1 shadow-sm">
               <button className="toolbar-btn" onClick={() => { exportJson(store.state); setMessage("JSON 已导出"); }} title="导出 JSON">
                 <Download className="h-4 w-4" />
@@ -349,6 +357,9 @@ export default function Home() {
                 );
               })}
             </nav>
+            <button className="btn-primary h-10 w-full justify-center text-sm" onClick={() => { store.saveNow(); setMessage("已保存并同步前台"); }}>
+              保存并同步前台（{savedLabel}）
+            </button>
             {message && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-money">{message}</div>}
           </div>
         </header>

@@ -48,10 +48,48 @@ export function budgetRows(state: AppState): BudgetComputed[] {
 }
 
 export function cashRows(state: AppState): CashComputed[] {
-  return state.cashAdvances.map((row) => ({
+  const manualRows = state.cashAdvances.map((row) => ({
     ...row,
     balance: row.paidAmount - row.usedAmount - row.returnedAmount - row.writtenOffAmount,
   }));
+
+  const grouped = new Map<string, Transaction[]>();
+  state.transactions
+    .filter((row) => row.fundSource === "备用金")
+    .forEach((row) => {
+      const key = [row.department, row.project, row.person || "未填写经办人"].join("|");
+      grouped.set(key, [...(grouped.get(key) ?? []), row]);
+    });
+
+  const transactionRows: CashComputed[] = Array.from(grouped.entries()).map(([key, rows]) => {
+    const [department, project, applicant] = key.split("|");
+    const sortedRows = [...rows].sort((a, b) => a.date.localeCompare(b.date));
+    const latest = [...rows].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const paidAmount = rows.filter((row) => row.businessType === "收入").reduce((sum, row) => sum + row.amount, 0);
+    const usedAmount = rows.filter((row) => row.businessType === "支出").reduce((sum, row) => sum + row.amount, 0);
+    const returnedAmount = rows.filter((row) => row.businessType === "归还").reduce((sum, row) => sum + row.amount, 0);
+    const balance = paidAmount - usedAmount - returnedAmount;
+    return {
+      id: `cash-flow-${key}`,
+      requestNo: "资金流水汇总",
+      requestDate: sortedRows[0]?.date ?? "",
+      department,
+      project,
+      applicant,
+      purpose: "由资金流水自动汇总",
+      requestAmount: paidAmount,
+      approver: latest?.approver ?? "",
+      status: balance > 0 ? "已支付" : "已完成",
+      paidAmount,
+      usedAmount,
+      returnedAmount,
+      writtenOffAmount: 0,
+      remark: latest?.remark ?? "资金流水自动同步",
+      balance,
+    };
+  });
+
+  return [...manualRows, ...transactionRows];
 }
 
 export function loanRows(state: AppState): LoanSummary[] {
