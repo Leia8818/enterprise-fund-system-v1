@@ -7,6 +7,7 @@ const basePath = isGitHubPagesBuild && repositoryName && !isUserOrOrgSite ? `/${
 const nextConfig = {
   reactStrictMode: true,
   output: "export",
+  trailingSlash: true,
   basePath,
   assetPrefix: basePath ? `${basePath}/` : undefined,
   env: {
