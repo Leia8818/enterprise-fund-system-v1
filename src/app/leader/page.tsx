@@ -66,7 +66,7 @@ export default function LeaderPage() {
 
   return (
     <main className="min-h-screen bg-[#f3f8f5]">
-      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} updatedAt={store.lastSavedAt || new Date().toISOString()} />
+      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} updatedAt={store.cloudUpdatedAt || store.lastSavedAt || new Date().toISOString()} />
 
       <div className="hidden lg:block">
       <header className="border-b border-line bg-white">

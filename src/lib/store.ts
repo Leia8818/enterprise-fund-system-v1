@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isCloudConfigured, loadCloudState, saveCloudState } from "@/lib/cloudStore";
 import type { AppState, Budget, CashAdvance, DictState, Transaction } from "@/lib/types";
 
 type CollectionKey = "transactions" | "budgets" | "cashAdvances";
@@ -17,17 +18,44 @@ export function useFundStore(initialState: AppState) {
   const [state, setLocalState] = useState<AppState>(initialState);
   const [loading, setLoading] = useState(true);
   const [lastSavedAt, setLastSavedAt] = useState("");
+  const [cloudStatus, setCloudStatus] = useState(isCloudConfigured() ? "云端待连接" : "云端未配置");
+  const [cloudUpdatedAt, setCloudUpdatedAt] = useState("");
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setLocalState(normalizeState(JSON.parse(saved) as Partial<AppState>, initialState));
-      } catch {
-        setLocalState(initialState);
+    let cancelled = false;
+    async function loadInitialState() {
+      let nextState = initialState;
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          nextState = normalizeState(JSON.parse(saved) as Partial<AppState>, initialState);
+        } catch {
+          nextState = initialState;
+        }
+      }
+      if (isCloudConfigured()) {
+        try {
+          setCloudStatus("正在加载云端");
+          const cloud = await loadCloudState();
+          if (cloud?.state) {
+            nextState = normalizeState(cloud.state, initialState);
+            setCloudUpdatedAt(cloud.updated_at);
+          }
+          setCloudStatus(cloud ? "云端已连接" : "云端暂无数据");
+        } catch {
+          setCloudStatus("云端读取失败");
+        }
+      }
+      if (!cancelled) {
+        setLocalState(nextState);
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+        setLoading(false);
       }
     }
-    setLoading(false);
+    void loadInitialState();
+    return () => {
+      cancelled = true;
+    };
   }, [initialState]);
 
   useEffect(() => {
@@ -47,18 +75,41 @@ export function useFundStore(initialState: AppState) {
         setLocalState(initialState);
       }
     }
+    async function loadCloudStateIntoLocal() {
+      if (!isCloudConfigured()) return;
+      try {
+        const cloud = await loadCloudState();
+        if (!cloud?.state) return;
+        const next = normalizeState(cloud.state, initialState);
+        setLocalState(next);
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        setCloudUpdatedAt(cloud.updated_at);
+        setCloudStatus("云端已同步");
+      } catch {
+        setCloudStatus("云端读取失败");
+      }
+    }
 
     function handleStorage(event: StorageEvent) {
       if (event.key === STORAGE_KEY) loadSavedState();
     }
 
+    const handleFocus = () => {
+      void loadCloudStateIntoLocal();
+    };
+    const handleTimer = () => {
+      void loadCloudStateIntoLocal();
+    };
+
     window.addEventListener("storage", handleStorage);
     window.addEventListener(STORAGE_EVENT, loadSavedState);
-    window.addEventListener("focus", loadSavedState);
+    window.addEventListener("focus", handleFocus);
+    const timer = window.setInterval(handleTimer, 30000);
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener(STORAGE_EVENT, loadSavedState);
-      window.removeEventListener("focus", loadSavedState);
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(timer);
     };
   }, [initialState]);
 
@@ -104,11 +155,31 @@ export function useFundStore(initialState: AppState) {
     });
   }
 
+  async function saveCloudNow() {
+    if (!isCloudConfigured()) {
+      setCloudStatus("云端未配置");
+      return false;
+    }
+    try {
+      setCloudStatus("正在保存云端");
+      const cloud = await saveCloudState(state);
+      setCloudUpdatedAt(cloud?.updated_at ?? new Date().toISOString());
+      setCloudStatus("云端已保存");
+      return true;
+    } catch {
+      setCloudStatus("云端保存失败");
+      return false;
+    }
+  }
+
   return {
     state,
     loading,
     lastSavedAt,
+    cloudStatus,
+    cloudUpdatedAt,
     saveNow: () => commit(state),
+    saveCloudNow,
     upsert,
     remove,
     reset,

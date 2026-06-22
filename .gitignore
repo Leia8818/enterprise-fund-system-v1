@@ -2,6 +2,7 @@
 node_modules
 .npm-cache
 .npmrc
+.env.local
 AGENTS.md
 design-qa.md
 .tools

@@ -12,6 +12,7 @@
 - Recharts
 - Lucide React
 - 浏览器 localStorage 本地持久化
+- Supabase 云端数据库同步（可选）
 - JSON / CSV 导入导出
 
 ## 功能模块
@@ -41,10 +42,9 @@
 - 收支类型：收入、支出、归还。
 - 状态：已支付、已完成、已归还。
 - 金额展示规则：收入/归还显示绿色 `+¥`，支出显示红色 `-¥`。
-- 数据保存在当前浏览器 localStorage 中，刷新页面不丢失。
-- 当前本地版的 localStorage 数据按设备和浏览器分别保存；电脑与手机可访问同一入口，但数据不会自动跨设备同步。
-- 后台提供“保存同步”按钮，可让同一浏览器内已打开的前台查看页刷新最新数据。
-- 如需电脑后台录入后手机扫码立即看到同一份数据，需要接入云端数据库或服务端 API。
+- 未配置云端数据库时，数据保存在当前浏览器 localStorage 中，刷新页面不丢失。
+- 配置 Supabase 后，后台点击“云端保存”，电脑端和手机端会读取同一份云端数据。
+- 前台查看页会在打开、窗口重新聚焦和约 30 秒轮询时自动读取云端最新数据。
 - 可导出 JSON、导入 JSON、导出 CSV。
 
 ## 日常处理流程
@@ -53,8 +53,9 @@
 2. 管理人员从 `/login` 登录后进入 `/admin` 后台。
 3. 进入“资金流水”，系统会显示字段完整/字段缺失数量。
 4. 新增或编辑流水时，金额只录入正数；系统按“收入/支出/归还”统一显示正负号。
-5. 点击“归档已完成”可批量归档状态为“已完成”的流水。
-6. 归档不会删除历史记录；财务统计仍会包含这些流水，日常列表默认只显示未归档记录。
+5. 点击“本地保存”会保存到当前浏览器；点击“云端保存”会同步到 Supabase，手机前台刷新后可查看。
+6. 点击“归档已完成”可批量归档状态为“已完成”的流水。
+7. 归档不会删除历史记录；财务统计仍会包含这些流水，日常列表默认只显示未归档记录。
 
 ## 本地运行
 
@@ -94,7 +95,7 @@ http://127.0.0.1:3000/login
 2. 局域网演示时，运行 `npm run dev` 后，二维码会指向当前访问域名下的 `/leader` 页面。
 3. 手机和电脑需要在同一个 Wi-Fi 下，手机扫码即可直接打开决策概览。
 
-> 如需手机录入后电脑同步看到，建议下一步接入云端数据库和服务端登录，例如 Supabase、PostgreSQL、MySQL 或部署版 SQLite API。
+> 手机扫码查看同一份后台数据，需要先完成下面的 Supabase 云端数据库配置。
 
 领导/决策查看入口：
 
@@ -119,6 +120,33 @@ npm run build
 ```text
 out/
 ```
+
+## 云端数据库配置
+
+当前版本支持 Supabase 作为云端数据库。配置完成后，后台录入和手机扫码查看会使用同一份云端数据。
+
+1. 登录 Supabase，新建一个 Project。
+2. 进入 `SQL Editor`，复制并执行 [supabase/schema.sql](supabase/schema.sql)。
+3. 在 Supabase 项目 `Settings > API` 中复制：
+   - Project URL
+   - anon public key
+4. 如果本地开发使用云端同步，在项目根目录新建 `.env.local`：
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=你的 Project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY=你的 anon public key
+NEXT_PUBLIC_SUPABASE_TABLE=fund_app_state
+```
+
+5. 如果 GitHub Pages 部署使用云端同步，进入 GitHub 仓库 `Settings > Secrets and variables > Actions`，新增：
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_SUPABASE_TABLE`，值为 `fund_app_state`
+6. 重新运行 GitHub Pages 部署。
+7. 打开后台 `/admin`，录入数据后点击“云端保存”。
+8. 手机扫码进入 `/leader`，刷新或等待自动同步即可看到最新数据。
+
+注意：当前 SQL 为静态前端演示版，允许匿名密钥读写单条 `default` 业务数据。正式上线建议增加 Supabase Auth、服务端 API 或 Edge Function，把写入权限收回到后台账号侧。
 
 ## 公网部署
 
@@ -161,10 +189,12 @@ src/app/globals.css        Tailwind 与全局样式
 src/data/seed.ts           基础初始数据
 src/lib/types.ts           数据模型
 src/lib/calculations.ts    自动汇总与风险预警逻辑
-src/lib/store.ts           浏览器本地存储逻辑
+src/lib/store.ts           本地存储与云端同步逻辑
+src/lib/cloudStore.ts      Supabase 读写封装
 src/lib/auth.ts            轻量登录状态逻辑
 src/lib/qrcodegen.ts       本地二维码生成器
 src/lib/utils.ts           金额、日期、样式工具
+supabase/schema.sql        Supabase 建表与演示权限脚本
 ```
 
 ## 后续扩展建议
