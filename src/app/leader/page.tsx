@@ -321,7 +321,7 @@ function MobileDecisionOverview({
         </div>
       </div>
 
-      <div className="-mt-5 space-y-4 px-4 pb-8">
+      <div className="-mt-3 space-y-4 px-4 pb-8">
         {!hasBusinessData && (
           <section className="rounded-3xl border border-amber-100 bg-amber-50 p-4 shadow-sm">
             <div className="text-base font-extrabold text-amber-800">暂无可展示数据</div>
@@ -331,10 +331,10 @@ function MobileDecisionOverview({
           </section>
         )}
 
-        <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-extrabold text-ink">核心资金</h2>
-            <span className="text-xs font-semibold text-slate-500">自动统计</span>
+        <section className="relative z-10 rounded-[28px] border border-emerald-100 bg-white p-5 shadow-[0_12px_32px_rgba(6,69,54,0.08)]">
+          <div className="mb-4 flex items-center justify-between gap-3 border-b border-emerald-50 pb-3">
+            <h2 className="text-xl font-extrabold leading-none text-ink">核心资金</h2>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-xs font-extrabold text-emerald-700">自动统计</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             {focusCards.map((card) => {
