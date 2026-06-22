@@ -30,11 +30,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("123456");
   const [message, setMessage] = useState("");
   const [entryUrl, setEntryUrl] = useState("");
-  const [nextPath, setNextPath] = useState("/");
+  const [nextPath, setNextPath] = useState("/admin");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const next = params.get("next") || "/";
+    const next = params.get("next") || "/admin";
     setNextPath(next);
     setEntryUrl(`${window.location.origin}${withBasePath("/leader")}`);
   }, []);
@@ -45,7 +45,7 @@ export default function LoginPage() {
       setMessage("账号或密码不正确");
       return;
     }
-    window.location.href = session.role === "领导查看" ? withBasePath("/leader") : withBasePath(nextPath);
+    window.location.href = session.role === "领导查看" ? withBasePath("/leader") : withBasePath(nextPath || "/admin");
   }
 
   const isLocalhost = entryUrl.includes("127.0.0.1") || entryUrl.includes("localhost");

@@ -52,6 +52,16 @@ export function requireLogin(nextPath: string) {
   return session;
 }
 
+export function requireAdmin(nextPath: string) {
+  const session = requireLogin(nextPath);
+  if (!session) return null;
+  if (session.role !== "管理端") {
+    window.location.href = withBasePath("/leader");
+    return null;
+  }
+  return session;
+}
+
 export function withBasePath(path: string) {
   if (!BASE_PATH) return path;
   return `${BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;
