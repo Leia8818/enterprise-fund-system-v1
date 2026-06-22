@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, KeyRound, Monitor, QrCode, Smartphone } from "lucide-react";
-import { login, withBasePath } from "@/lib/auth";
+import { BASE_PATH, login, withBasePath } from "@/lib/auth";
 import { qrcodegen } from "@/lib/qrcodegen";
 
 function QrSvg({ value }: { value: string }) {
@@ -56,7 +56,7 @@ export default function LoginPage() {
         <section className="rounded-2xl bg-[#064536] p-8 text-white shadow-2xl shadow-emerald-950/20">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-32 items-center rounded-xl bg-white px-4 shadow-lg">
-              <Image src="/brand/mgrass-logo-cropped.png" alt="蒙草 M·GRASS" width={130} height={72} className="h-auto w-full object-contain" priority />
+              <Image src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`} alt="蒙草 M·GRASS" width={130} height={72} className="h-auto w-full object-contain" priority />
             </div>
             <div>
               <div className="text-sm font-semibold text-emerald-100">统一访问入口</div>

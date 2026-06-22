@@ -28,7 +28,7 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { logout, requireLogin, type LoginSession } from "@/lib/auth";
+import { BASE_PATH, logout, requireLogin, type LoginSession } from "@/lib/auth";
 import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -82,7 +82,7 @@ export default function LeaderPage() {
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-28 items-center justify-center rounded-xl bg-white px-3 shadow-sm ring-1 ring-line">
               <Image
-                src="/brand/mgrass-logo-cropped.png"
+                src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`}
                 alt="蒙草 M·GRASS"
                 width={112}
                 height={62}

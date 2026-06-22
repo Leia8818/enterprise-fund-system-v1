@@ -35,7 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { logout, requireLogin, type LoginSession } from "@/lib/auth";
+import { BASE_PATH, logout, requireLogin, type LoginSession } from "@/lib/auth";
 import { useFundStore } from "@/lib/store";
 import {
   BusinessType,
@@ -188,7 +188,7 @@ export default function Home() {
         <div className="relative border-b border-white/10 px-5 pb-5 pt-6 text-center">
           <div className="absolute right-4 top-4 flex w-16 items-center justify-center">
             <Image
-              src="/brand/mgrass-logo-sidebar.png"
+              src={`${BASE_PATH}/brand/mgrass-logo-sidebar.png`}
               alt="蒙草 M·GRASS"
               width={64}
               height={34}
