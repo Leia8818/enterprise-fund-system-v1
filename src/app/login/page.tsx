@@ -36,7 +36,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next") || "/";
     setNextPath(next);
-    setEntryUrl(`${window.location.origin}${withBasePath("/login")}?next=${encodeURIComponent(next)}`);
+    setEntryUrl(`${window.location.origin}${withBasePath("/leader")}`);
   }, []);
 
   function submit() {
@@ -101,7 +101,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-extrabold">手机扫码</h2>
-                <p className="mt-1 text-sm text-slate-500">扫码后进入同一个登录页面</p>
+                <p className="mt-1 text-sm text-slate-500">扫码后直接进入决策概览</p>
               </div>
             </div>
 

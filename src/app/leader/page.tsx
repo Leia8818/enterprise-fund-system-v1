@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -10,8 +9,6 @@ import {
   ClipboardList,
   HandCoins,
   Landmark,
-  LogOut,
-  QrCode,
   ShieldAlert,
   UserRound,
   WalletCards,
@@ -28,23 +25,14 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { BASE_PATH, logout, requireLogin, type LoginSession } from "@/lib/auth";
+import { BASE_PATH } from "@/lib/auth";
 import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
 import type { Transaction, Warning } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 export default function LeaderPage() {
-  const [session, setSession] = useState<LoginSession | null>(null);
   const store = useFundStore(seedState);
-
-  useEffect(() => {
-    setSession(requireLogin("/leader"));
-  }, []);
-
-  if (!session) {
-    return <div className="flex min-h-screen items-center justify-center bg-[#f3f8f5] text-sm font-semibold text-slate-500">正在进入登录入口...</div>;
-  }
 
   const budgets = budgetRows(store.state);
   const cash = cashRows(store.state);
@@ -103,18 +91,10 @@ export default function LeaderPage() {
             <div className="rounded-lg bg-slate-50 px-4 py-2 text-sm text-slate-600">
               数据更新时间：{formatDate(new Date().toISOString())}
             </div>
-            <Link className="btn-ghost" href="/login?next=%2Fleader">
-              <QrCode className="h-4 w-4" />
-              扫码入口
-            </Link>
-            <Link className="btn-ghost" href="/">
+            <Link className="btn-ghost" href="/login">
               <ArrowLeft className="h-4 w-4" />
-              返回工作台
+              管理端登录
             </Link>
-            <button className="btn-ghost" onClick={logout}>
-              <LogOut className="h-4 w-4" />
-              退出
-            </button>
           </div>
         </div>
       </header>
@@ -408,14 +388,13 @@ function MobileDecisionOverview({
         </section>
 
         <div className="grid grid-cols-2 gap-3">
-          <Link className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800" href="/">
+          <Link className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800" href="/login">
             <ArrowLeft className="h-4 w-4" />
-            工作台
+            管理端登录
           </Link>
-          <button className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white" onClick={logout}>
-            <LogOut className="h-4 w-4" />
-            退出
-          </button>
+          <Link className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white" href="/login?next=%2F">
+            进入工作台
+          </Link>
         </div>
       </div>
     </section>
