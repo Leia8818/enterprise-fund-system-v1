@@ -66,7 +66,7 @@ export default function LeaderPage() {
 
   return (
     <main className="min-h-screen bg-[#f3f8f5]">
-      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} />
+      <MobileDecisionOverview dashboard={dashboard} warnings={warnings} recentTransactions={dashboard.recentTransactions} updatedAt={store.lastSavedAt || new Date().toISOString()} />
 
       <div className="hidden lg:block">
       <header className="border-b border-line bg-white">
@@ -245,10 +245,12 @@ function MobileDecisionOverview({
   dashboard,
   warnings,
   recentTransactions,
+  updatedAt,
 }: {
   dashboard: ReturnType<typeof computeDashboard>;
   warnings: Warning[];
   recentTransactions: Transaction[];
+  updatedAt: string;
 }) {
   const focusCards = [
     { label: "总资金余额", value: formatCurrency(dashboard.totalBalance), tone: "text-emerald-700", icon: Landmark },
@@ -263,29 +265,31 @@ function MobileDecisionOverview({
 
   return (
     <section className="lg:hidden">
-      <div className="bg-[#064536] px-4 pb-8 pt-4 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold text-emerald-100">移动决策概览</div>
-            <h1 className="mt-2 text-2xl font-extrabold leading-tight">智能装备研究院<br />资金管理系统</h1>
-            <div className="mt-3 text-xs text-emerald-100">更新：{formatDate(new Date().toISOString())}</div>
-          </div>
-          <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-xl bg-white/95 px-2 shadow-sm">
-            <Image
-              src={`${BASE_PATH}/brand/mgrass-logo-cropped.png`}
-              alt="蒙草 M·GRASS"
-              width={86}
-              height={44}
-              className="h-auto w-full object-contain"
-              priority
-            />
-          </div>
+      <div className="relative bg-[#064536] px-4 pb-8 pt-5 text-white">
+        <div className="absolute right-4 top-4 flex w-20 items-center justify-center">
+          <Image
+            src={`${BASE_PATH}/brand/mgrass-logo-sidebar.png`}
+            alt="蒙草 M·GRASS"
+            width={86}
+            height={46}
+            className="h-auto w-full object-contain drop-shadow-[0_10px_18px_rgba(0,0,0,0.25)]"
+            priority
+          />
+        </div>
+        <div className="mx-auto max-w-[280px] pt-14 text-center">
+          <div className="text-xs font-semibold text-emerald-100">资金决策概览</div>
+          <h1 className="mt-3 text-[28px] font-extrabold leading-tight tracking-wide">
+            智能装备研究院
+            <br />
+            资金管理系统
+          </h1>
+          <div className="mt-3 text-xs text-emerald-100">数据更新：{formatDate(updatedAt)}</div>
         </div>
 
         <div className="mt-5 rounded-3xl bg-white/10 p-4 ring-1 ring-white/15">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-emerald-100">当前资金余额</span>
-            <span className="rounded-full bg-white/15 px-2 py-1 text-xs font-bold">领导查看</span>
+            <span className="rounded-full bg-emerald-300/15 px-2 py-1 text-xs font-bold text-emerald-100">仅查看</span>
           </div>
           <div className="mt-2 text-4xl font-extrabold tracking-tight">{formatCurrency(dashboard.totalBalance)}</div>
           <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
