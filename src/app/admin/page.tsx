@@ -35,7 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { BASE_PATH, logout, requireAdmin, withBasePath, type LoginSession } from "@/lib/auth";
+import { BASE_PATH, logout, requireAdmin, type LoginSession } from "@/lib/auth";
 import { useFundStore } from "@/lib/store";
 import {
   BusinessType,
@@ -308,11 +308,11 @@ export default function Home() {
                 <span>清空</span>
               </button>
             </div>
-            <Link className="toolbar-link" href={withBasePath("/login")} title="入口二维码">
+            <Link className="toolbar-link" href="/login" title="入口二维码">
               <QrCode className="h-4 w-4" />
               <span>二维码</span>
             </Link>
-            <Link className="toolbar-primary" href={withBasePath("/leader")}>
+            <Link className="toolbar-primary" href="/leader">
               <Gauge className="h-4 w-4" />
               <span>查看前台</span>
             </Link>
@@ -322,7 +322,7 @@ export default function Home() {
             </button>
           </div>
           <div className="flex items-center gap-2 md:hidden">
-            <Link className="rounded-xl bg-emerald-50 p-3 text-emerald-700" href={withBasePath("/leader")} title="决策概览">
+            <Link className="rounded-xl bg-emerald-50 p-3 text-emerald-700" href="/leader" title="决策概览">
               <Gauge className="h-5 w-5" />
             </Link>
             <button className="rounded-xl bg-slate-50 p-3 text-slate-600" onClick={logout} title="退出登录">

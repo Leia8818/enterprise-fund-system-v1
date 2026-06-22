@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, QrCode, ScanLine } from "lucide-react";
-import { BASE_PATH, publicUrl, withBasePath } from "@/lib/auth";
+import { BASE_PATH, publicUrl } from "@/lib/auth";
 import { qrcodegen } from "@/lib/qrcodegen";
 
 function QrSvg({ value }: { value: string }) {
@@ -83,7 +83,7 @@ export default function ShowcaseEntry() {
               {entryUrl && <QrSvg value={entryUrl} />}
             </div>
 
-            <Link className="btn-primary mx-auto mt-6 h-12 w-full max-w-sm justify-center text-base" href={withBasePath("/leader")}>
+            <Link className="btn-primary mx-auto mt-6 h-12 w-full max-w-sm justify-center text-base" href="/leader">
               打开查看端
               <ArrowRight className="h-5 w-5" />
             </Link>
