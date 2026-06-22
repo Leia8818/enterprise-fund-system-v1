@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, KeyRound, QrCode } from "lucide-react";
-import { BASE_PATH, login, withBasePath } from "@/lib/auth";
+import { BASE_PATH, login, publicUrl, withBasePath } from "@/lib/auth";
 import { qrcodegen } from "@/lib/qrcodegen";
 
 function QrSvg({ value }: { value: string }) {
@@ -36,7 +36,7 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const next = params.get("next") || "/admin";
     setNextPath(next);
-    setEntryUrl(`${window.location.origin}${withBasePath("/leader")}`);
+    setEntryUrl(publicUrl("/leader"));
   }, []);
 
   function submit() {

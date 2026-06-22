@@ -8,6 +8,7 @@ export type LoginSession = {
 
 export const AUTH_SESSION_KEY = "mgrass-fund-login-session-v1";
 export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+export const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_PUBLIC_ORIGIN ?? "https://leia8818.github.io";
 
 const accounts = [
   { userName: "admin", password: "123456", role: "管理端" as const },
@@ -65,4 +66,8 @@ export function requireAdmin(nextPath: string) {
 export function withBasePath(path: string) {
   if (!BASE_PATH) return path;
   return `${BASE_PATH}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+export function publicUrl(path: string) {
+  return `${PUBLIC_ORIGIN}${withBasePath(path)}`;
 }

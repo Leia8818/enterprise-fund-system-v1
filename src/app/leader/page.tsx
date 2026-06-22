@@ -25,7 +25,7 @@ import {
   YAxis,
 } from "recharts";
 import { seedState } from "@/data/seed";
-import { BASE_PATH } from "@/lib/auth";
+import { BASE_PATH, withBasePath } from "@/lib/auth";
 import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
 import type { Transaction, Warning } from "@/lib/types";
@@ -98,7 +98,7 @@ export default function LeaderPage() {
             <div className="rounded-lg bg-slate-50 px-4 py-2 text-sm text-slate-600">
               数据更新时间：{formatDate(new Date().toISOString())}
             </div>
-            <Link className="btn-ghost" href="/login?next=%2Fadmin">
+            <Link className="btn-ghost" href={`${withBasePath("/login")}?next=%2Fadmin`}>
               <ArrowLeft className="h-4 w-4" />
               后台管理
             </Link>
@@ -417,11 +417,11 @@ function MobileDecisionOverview({
         </section>
 
         <div className="grid grid-cols-2 gap-3">
-          <Link className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800" href="/login?next=%2Fadmin">
+          <Link className="flex items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-800" href={`${withBasePath("/login")}?next=%2Fadmin`}>
             <ArrowLeft className="h-4 w-4" />
             后台管理
           </Link>
-          <Link className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white" href="/">
+          <Link className="flex items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-bold text-white" href={withBasePath("/")}>
             查看入口
           </Link>
         </div>
