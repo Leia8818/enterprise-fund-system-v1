@@ -647,7 +647,21 @@ function TransactionsModule({
         onEdit={setEditing}
         onDelete={remove}
       />
-      <EditDialog title="资金流水" row={editing} fields={fields} onClose={() => setEditing(null)} onSave={(row) => { upsert(row as Transaction); setEditing(null); }} />
+      <EditDialog
+        title="资金流水"
+        row={editing}
+        fields={fields}
+        onClose={() => setEditing(null)}
+        onSave={(row) => { upsert(row as Transaction); setEditing(null); }}
+        onDraftChange={(draft, key, value) => {
+          if (key !== "date") return draft;
+          return {
+            ...draft,
+            date: String(value),
+            eventNo: generateEventNo(state.transactions, String(value), draft.id),
+          };
+        }}
+      />
     </ModuleFrame>
   );
 }
@@ -1151,12 +1165,14 @@ function EditDialog<T extends { id: string }>({
   fields,
   onClose,
   onSave,
+  onDraftChange,
 }: {
   title: string;
   row: T | null;
   fields: Array<Field<T>>;
   onClose: () => void;
   onSave: (row: T) => void;
+  onDraftChange?: (draft: T, key: keyof T, value: string | number) => T;
 }) {
   const [draft, setDraft] = useState<T | null>(row);
   useEffect(() => setDraft(row), [row]);
@@ -1175,7 +1191,11 @@ function EditDialog<T extends { id: string }>({
               <InputField
                 field={field}
                 value={draft[field.key]}
-                onChange={(value) => setDraft({ ...draft, [field.key]: field.type === "number" ? Number(value) : value } as T)}
+                onChange={(value) => {
+                  const nextValue = field.type === "number" ? Number(value) : value;
+                  const nextDraft = { ...draft, [field.key]: nextValue } as T;
+                  setDraft(onDraftChange ? onDraftChange(nextDraft, field.key, nextValue) : nextDraft);
+                }}
               />
             </label>
           ))}
@@ -1411,6 +1431,17 @@ function transactionFields(state: typeof seedState): Array<Field<Transaction>> {
   ];
 }
 
+function generateEventNo(rows: Transaction[], date: string, currentId?: string) {
+  const compactDate = (date || today()).replaceAll("-", "");
+  const rowsOnDate = rows.filter((row) => row.id !== currentId && row.date.replaceAll("-", "") === compactDate);
+  const maxSeq = rowsOnDate.reduce((max, row) => {
+    const match = row.eventNo.match(new RegExp(`^${compactDate}-(\\d+)$`));
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  const nextSeq = Math.max(maxSeq, rowsOnDate.length) + 1;
+  return `${compactDate}-${String(nextSeq).padStart(2, "0")}`;
+}
+
 function budgetFields(state: typeof seedState): Array<Field<Budget>> {
   return [
     { key: "year", label: "年度", type: "number" },
@@ -1445,10 +1476,11 @@ function cashFields(state: typeof seedState): Array<Field<CashAdvance>> {
 }
 
 function emptyTransaction(state: typeof seedState): Transaction {
+  const date = today();
   return {
     id: newId("tx"),
-    date: today(),
-    eventNo: `SX-${today().replaceAll("-", "")}-${state.transactions.length + 1}` ,
+    date,
+    eventNo: generateEventNo(state.transactions, date),
     department: state.dicts.departments[0]?.name ?? "",
     project: state.dicts.projects[0]?.name ?? "",
     topic: "",
