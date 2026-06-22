@@ -184,7 +184,7 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen bg-panel">
-      <aside className="fixed inset-y-0 left-0 z-30 flex w-64 flex-col bg-gradient-to-b from-[#064536] via-[#08392f] to-[#052820] text-white">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-gradient-to-b from-[#064536] via-[#08392f] to-[#052820] text-white lg:flex">
         <div className="relative border-b border-white/10 px-5 pb-5 pt-6 text-center">
           <div className="absolute right-4 top-4 flex w-16 items-center justify-center">
             <Image
@@ -245,13 +245,14 @@ export default function Home() {
         </div>
       </aside>
 
-      <main className="ml-64 flex min-h-screen flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex min-h-[72px] items-center justify-between gap-5 border-b border-line bg-white/95 px-6 backdrop-blur">
-          <div>
+      <main className="flex min-h-screen flex-1 flex-col lg:ml-64">
+        <header className="sticky top-0 z-20 border-b border-line bg-white/95 backdrop-blur">
+          <div className="flex min-h-[72px] items-center justify-between gap-4 px-4 py-3 lg:px-6">
+          <div className="min-w-0">
             <h1 className="text-xl font-bold text-ink">{title}</h1>
-            <p className="text-xs text-slate-500">独立本地版本 · 浏览器自动保存 · 支持 JSON/CSV 导入导出</p>
+            <p className="hidden text-xs text-slate-500 sm:block">独立本地版本 · 浏览器自动保存 · 支持 JSON/CSV 导入导出</p>
           </div>
-          <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
+          <div className="hidden min-w-0 flex-1 items-center justify-end gap-2 md:flex">
             {message && <span className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-money">{message}</span>}
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-emerald-600/50" />
@@ -307,9 +308,52 @@ export default function Home() {
               <span>退出</span>
             </button>
           </div>
+          <div className="flex items-center gap-2 md:hidden">
+            <Link className="rounded-xl bg-emerald-50 p-3 text-emerald-700" href="/leader" title="决策概览">
+              <Gauge className="h-5 w-5" />
+            </Link>
+            <button className="rounded-xl bg-slate-50 p-3 text-slate-600" onClick={logout} title="退出登录">
+              <LogOut className="h-5 w-5" />
+            </button>
+          </div>
+          </div>
+          <div className="space-y-3 border-t border-line px-4 py-3 md:hidden">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-emerald-600/50" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                className="field h-11 w-full rounded-xl border-emerald-100 bg-emerald-50/40 pl-9 text-sm"
+                placeholder="搜索当前模块..."
+              />
+            </div>
+            <nav className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const active = view === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => {
+                      setView(item.key);
+                      setQuery("");
+                    }}
+                    className={cn(
+                      "flex shrink-0 items-center gap-2 rounded-full px-4 py-2 text-sm font-bold transition",
+                      active ? "bg-emerald-600 text-white shadow-sm" : "bg-white text-slate-600 ring-1 ring-emerald-100",
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label === "Dashboard" ? "概览" : item.label}
+                  </button>
+                );
+              })}
+            </nav>
+            {message && <div className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-money">{message}</div>}
+          </div>
         </header>
 
-        <div className="p-6">
+        <div className="p-4 lg:p-6">
           {view === "dashboard" && <Dashboard derived={derived} setView={setView} />}
           {view === "transactions" && (
             <TransactionsModule
@@ -381,13 +425,13 @@ function Dashboard({
 
   return (
     <div className="space-y-6">
-      <section className="grid grid-cols-3 gap-4 xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-5">
         {cards.map((card) => (
           <MetricCard key={card.label} {...card} />
         ))}
       </section>
 
-      <section className="grid grid-cols-2 gap-4">
+      <section className="grid gap-4 xl:grid-cols-2">
         <ChartCard title="部门各项费用预算执行率">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={derived.expenseBudgets}>
@@ -422,7 +466,7 @@ function Dashboard({
         </ChartCard>
       </section>
 
-      <section className="grid grid-cols-[1fr_1.15fr] gap-4">
+      <section className="grid gap-4 xl:grid-cols-[1fr_1.15fr]">
         <ChartCard title="各项目累计支出">
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={derived.projects.slice(0, 6)} layout="vertical">
@@ -455,7 +499,7 @@ function Dashboard({
         </Panel>
       </section>
 
-      <section className="grid grid-cols-[1.3fr_1fr] gap-4">
+      <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
         <Panel title="最近10条资金流水" action={<button onClick={() => setView("transactions")} className="btn-ghost">查看全部</button>}>
           <SimpleTable
             columns={[
@@ -815,7 +859,7 @@ function SettingsModule({
         <DataTable rows={dict.people.filter((row) => includesQuery(row, query))} columns={[["name", "姓名"], ["department", "所属部门"], ["role", "角色"]]} />
       )}
       {tab === "categories" && (
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
           {dict.expenseCategories.map((category) => (
             <div key={category} className="rounded-lg border border-line bg-white px-4 py-3 text-sm font-semibold text-slate-700">{category}</div>
           ))}
@@ -1102,15 +1146,15 @@ function EditDialog<T extends { id: string }>({
   useEffect(() => setDraft(row), [row]);
   if (!row || !draft) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-3 sm:p-6">
       <div className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b border-line px-5 py-4">
           <h3 className="text-lg font-bold text-ink">{title}</h3>
           <button className="btn-ghost" onClick={onClose}>关闭</button>
         </div>
-        <div className="grid max-h-[68vh] grid-cols-2 gap-3 overflow-y-auto p-5">
+        <div className="grid max-h-[68vh] gap-3 overflow-y-auto p-4 sm:grid-cols-2 sm:p-5">
           {fields.map((field) => (
-            <label key={String(field.key)} className={cn("space-y-1 text-sm font-semibold text-slate-600", field.span === "full" && "col-span-2")}>
+            <label key={String(field.key)} className={cn("space-y-1 text-sm font-semibold text-slate-600", field.span === "full" && "sm:col-span-2")}>
               <span>{field.label}</span>
               <InputField
                 field={field}
@@ -1150,7 +1194,7 @@ function InputField<T>({
 
 function SummaryStrip({ items }: { items: Array<[string, number, string, boolean?]> }) {
   return (
-    <div className="grid grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       {items.map(([label, value, tone, money = true]) => {
         const color = toneColor(tone);
         return (
