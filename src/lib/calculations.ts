@@ -48,10 +48,11 @@ function matchesBudget(row: Transaction, budget: { id?: string; department: stri
   const expectedFundSource = budgetFundSource(budget);
   const matchesExpectedFund = !expectedFundSource || row.fundSource === expectedFundSource;
   const matchesLegacyBudgetRow = row.fundSource === "其他" && Boolean(budget.project) && row.project === budget.project;
+  const isDefaultBudget = Boolean(budget.id?.startsWith("auto-department-budget-") || budget.id?.startsWith("auto-self-fund-budget-"));
   return (
     expenseTypes.includes(row.businessType) &&
     (matchesExpectedFund || matchesLegacyBudgetRow) &&
-    (!budget.department || row.department === budget.department) &&
+    (isDefaultBudget || !budget.department || row.department === budget.department) &&
     (!budget.project || row.project === budget.project) &&
     (!budget.topic || row.topic === budget.topic) &&
     (!budget.category || budget.category === "其他" || inferBudgetCategory(row) === budget.category)
@@ -118,6 +119,7 @@ function budgetFundSource(budget: { id?: string; project: string; category: stri
 function inferBudgetCategory(row: Transaction) {
   if (row.expenseCategory && row.expenseCategory !== "其他") return row.expenseCategory;
   const text = `${row.project} ${row.remark}`.replace(/\s+/g, "");
+  if (/办公|文具|耗材|打印|复印|快递/.test(text)) return "办公费";
   return budgetKeywordCategories.find((category) => text.includes(category)) ?? row.expenseCategory;
 }
 
