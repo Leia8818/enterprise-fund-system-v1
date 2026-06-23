@@ -55,9 +55,11 @@ import {
   cashRows,
   computeDashboard,
   departmentRows,
+  departmentBudgetCategories,
   laborRows,
   loanRows,
   projectRows,
+  selfFundBudgetCategories,
   transactionSignedAmount,
   topicRows,
   warningRows,
@@ -103,7 +105,7 @@ const navItems: Array<{ key: View; label: string; sub: string; icon: React.Eleme
   { key: "warnings", label: "风险预警", sub: "自动生成", icon: AlertTriangle },
 ];
 
-const sourceOptions = ["课题劳务费", "备用金", "借款", "其他"];
+const sourceOptions = ["部门预算", "部门课题自筹预算", "课题劳务费", "备用金", "借款", "其他"];
 const businessTypeOptions: BusinessType[] = ["收入", "支出", "归还"];
 const statusOptions: Status[] = ["已支付", "已完成", "已归还"];
 const expenseOptions: ExpenseCategory[] = [
@@ -156,7 +158,7 @@ export default function Home() {
       topics: topicRows(store.state, budgets),
       todoRows: buildTodayTodoRows(store.state.transactions),
       expenseBudgets: budgets
-        .filter((row) => ["招待费", "培训费", "财产保险费"].includes(row.category))
+        .filter((row) => departmentBudgetCategories.some((item) => item.category === row.category))
         .map((row) => ({
           id: row.id,
           category: row.category,
@@ -165,7 +167,7 @@ export default function Home() {
           executionRate: row.executionRate,
         })),
       selfFundBudgets: budgets
-        .filter((row) => ["会员费", "保险费", "办公费", "房租", "交通费", "物流运输"].includes(row.category))
+        .filter((row) => selfFundBudgetCategories.some((item) => item.category === row.category))
         .map((row) => ({
           id: row.id,
           category: row.category,
@@ -654,6 +656,8 @@ function TransactionsModule({
         onClose={() => setEditing(null)}
         onSave={(row) => { upsert(row as Transaction); setEditing(null); }}
         onDraftChange={(draft, key, value) => {
+          if (key === "project") return applyProjectBudgetSource(draft, String(value));
+          if (key === "fundSource") return applyFundSourceProject(draft, String(value));
           if (key !== "date") return draft;
           return {
             ...draft,
@@ -1307,7 +1311,7 @@ function buildDerived() {
     topics: topicRows(seedState, budgets),
     todoRows: buildTodayTodoRows(seedState.transactions),
     expenseBudgets: budgets
-      .filter((row) => ["招待费", "培训费", "财产保险费"].includes(row.category))
+      .filter((row) => departmentBudgetCategories.some((item) => item.category === row.category))
       .map((row) => ({
         id: row.id,
         category: row.category,
@@ -1316,7 +1320,7 @@ function buildDerived() {
         executionRate: row.executionRate,
       })),
     selfFundBudgets: budgets
-      .filter((row) => ["会员费", "保险费", "办公费", "房租", "交通费", "物流运输"].includes(row.category))
+      .filter((row) => selfFundBudgetCategories.some((item) => item.category === row.category))
       .map((row) => ({
         id: row.id,
         category: row.category,
@@ -1429,6 +1433,22 @@ function transactionFields(state: typeof seedState): Array<Field<Transaction>> {
     { key: "status", label: "状态", type: "select", options: statusOptions },
     { key: "remark", label: "备注", type: "textarea", span: "full" },
   ];
+}
+
+function applyProjectBudgetSource(draft: Transaction, project: string): Transaction {
+  if (project === "部门管理费") return { ...draft, project, fundSource: "部门预算" };
+  if (project === "部门课题自筹费") return { ...draft, project, fundSource: "部门课题自筹预算" };
+  return { ...draft, project };
+}
+
+function applyFundSourceProject(draft: Transaction, fundSource: string): Transaction {
+  if (fundSource === "部门预算" && (!draft.project || draft.project === "部门课题自筹费" || draft.project === "其他")) {
+    return { ...draft, fundSource, project: "部门管理费" };
+  }
+  if (fundSource === "部门课题自筹预算" && (!draft.project || draft.project === "部门管理费" || draft.project === "其他")) {
+    return { ...draft, fundSource, project: "部门课题自筹费" };
+  }
+  return { ...draft, fundSource: fundSource as Transaction["fundSource"] };
 }
 
 function generateEventNo(rows: Transaction[], date: string, currentId?: string) {

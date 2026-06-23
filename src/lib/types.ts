@@ -1,4 +1,4 @@
-export type FundSource = "课题劳务费" | "备用金" | "借款" | "其他";
+export type FundSource = "部门预算" | "部门课题自筹预算" | "课题劳务费" | "备用金" | "借款" | "其他";
 
 export type BusinessType = "收入" | "支出" | "归还";
 

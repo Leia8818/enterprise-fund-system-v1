@@ -26,7 +26,17 @@ import {
 } from "recharts";
 import { seedState } from "@/data/seed";
 import { BASE_PATH } from "@/lib/auth";
-import { budgetRows, cashRows, computeDashboard, departmentRows, loanRows, transactionSignedAmount, warningRows } from "@/lib/calculations";
+import {
+  budgetRows,
+  cashRows,
+  computeDashboard,
+  departmentBudgetCategories,
+  departmentRows,
+  loanRows,
+  selfFundBudgetCategories,
+  transactionSignedAmount,
+  warningRows,
+} from "@/lib/calculations";
 import { useFundStore } from "@/lib/store";
 import type { Transaction, Warning } from "@/lib/types";
 import { formatCurrency, formatDate } from "@/lib/utils";
@@ -41,14 +51,14 @@ export default function LeaderPage() {
   const dashboard = computeDashboard(store.state, budgets, cash, loans, warnings);
   const departments = departmentRows(store.state, budgets, cash, loans, warnings);
   const expenseBudgets = budgets
-    .filter((row) => ["招待费", "培训费", "财产保险费"].includes(row.category))
+    .filter((row) => departmentBudgetCategories.some((item) => item.category === row.category))
     .map((row) => ({
       id: row.id,
       category: row.category,
       executionRate: row.executionRate,
     }));
   const selfFundBudgets = budgets
-    .filter((row) => ["会员费", "保险费", "办公费", "房租", "交通费", "物流运输"].includes(row.category))
+    .filter((row) => selfFundBudgetCategories.some((item) => item.category === row.category))
     .map((row) => ({
       id: row.id,
       category: row.category,

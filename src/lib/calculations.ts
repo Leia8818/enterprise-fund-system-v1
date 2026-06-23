@@ -12,6 +12,26 @@ import { byMonth, daysBetween, today } from "@/lib/utils";
 
 export const expenseTypes: BusinessType[] = ["支出"];
 
+export const departmentBudgetCategories = [
+  { category: "招待费", amount: 30000 },
+  { category: "培训费", amount: 5000 },
+  { category: "财产保险费", amount: 800 },
+] as const;
+
+export const selfFundBudgetCategories = [
+  { category: "会员费", amount: 2000 },
+  { category: "保险费", amount: 5000 },
+  { category: "办公费", amount: 8000 },
+  { category: "房租", amount: 22000 },
+  { category: "交通费", amount: 72000 },
+  { category: "物流运输", amount: 400000 },
+] as const;
+
+const budgetKeywordCategories = [
+  ...departmentBudgetCategories.map((item) => item.category),
+  ...selfFundBudgetCategories.map((item) => item.category),
+].sort((a, b) => b.length - a.length);
+
 export function transactionSignedAmount(row: Transaction) {
   return row.businessType === "支出" ? -Math.abs(row.amount) : Math.abs(row.amount);
 }
@@ -24,18 +44,22 @@ function sumSignedTransactions(transactions: Transaction[], predicate: (row: Tra
   return transactions.filter(predicate).reduce((sum, row) => sum + transactionSignedAmount(row), 0);
 }
 
-function matchesBudget(row: Transaction, budget: { department: string; project: string; topic: string; category: string }) {
+function matchesBudget(row: Transaction, budget: { id?: string; department: string; project: string; topic: string; category: string }) {
+  const expectedFundSource = budgetFundSource(budget);
+  const matchesExpectedFund = !expectedFundSource || row.fundSource === expectedFundSource;
+  const matchesLegacyBudgetRow = row.fundSource === "其他" && Boolean(budget.project) && row.project === budget.project;
   return (
     expenseTypes.includes(row.businessType) &&
+    (matchesExpectedFund || matchesLegacyBudgetRow) &&
     (!budget.department || row.department === budget.department) &&
     (!budget.project || row.project === budget.project) &&
     (!budget.topic || row.topic === budget.topic) &&
-    (!budget.category || budget.category === "其他" || row.expenseCategory === budget.category)
+    (!budget.category || budget.category === "其他" || inferBudgetCategory(row) === budget.category)
   );
 }
 
 export function budgetRows(state: AppState): BudgetComputed[] {
-  return state.budgets.map((budget) => {
+  return mergeDefaultBudgets(state).map((budget) => {
     const used = sumTransactions(state.transactions, (row) => matchesBudget(row, budget));
     const remaining = budget.amount - used;
     return {
@@ -45,6 +69,56 @@ export function budgetRows(state: AppState): BudgetComputed[] {
       executionRate: budget.amount ? (used / budget.amount) * 100 : 0,
     };
   });
+}
+
+function mergeDefaultBudgets(state: AppState) {
+  const year = new Date().getFullYear();
+  const defaults = [
+    ...departmentBudgetCategories.map((item, index) => ({
+      id: `auto-department-budget-${index + 1}`,
+      year,
+      type: "部门预算" as const,
+      department: "智能装备研究院",
+      project: "部门管理费",
+      topic: "",
+      category: item.category,
+      amount: item.amount,
+      owner: "",
+      remark: "系统默认部门预算",
+    })),
+    ...selfFundBudgetCategories.map((item, index) => ({
+      id: `auto-self-fund-budget-${index + 1}`,
+      year,
+      type: "项目预算" as const,
+      department: "智能装备研究院",
+      project: "部门课题自筹费",
+      topic: "",
+      category: item.category,
+      amount: item.amount,
+      owner: "",
+      remark: "系统默认部门课题自筹预算",
+    })),
+  ];
+  const hasManualBudget = (defaultBudget: (typeof defaults)[number]) =>
+    state.budgets.some((budget) =>
+      budget.year === defaultBudget.year &&
+      budget.department === defaultBudget.department &&
+      budget.project === defaultBudget.project &&
+      budget.category === defaultBudget.category
+    );
+  return [...defaults.filter((budget) => !hasManualBudget(budget)), ...state.budgets];
+}
+
+function budgetFundSource(budget: { id?: string; project: string; category: string }) {
+  if (budget.id?.startsWith("auto-department-budget-") || budget.project === "部门管理费") return "部门预算";
+  if (budget.id?.startsWith("auto-self-fund-budget-") || budget.project === "部门课题自筹费") return "部门课题自筹预算";
+  return "";
+}
+
+function inferBudgetCategory(row: Transaction) {
+  if (row.expenseCategory && row.expenseCategory !== "其他") return row.expenseCategory;
+  const text = `${row.project} ${row.remark}`.replace(/\s+/g, "");
+  return budgetKeywordCategories.find((category) => text.includes(category)) ?? row.expenseCategory;
 }
 
 export function cashRows(state: AppState): CashComputed[] {
@@ -262,7 +336,7 @@ export function computeDashboard(
   const totalBudget = budgets.reduce((sum, row) => sum + row.amount, 0);
   const usedBudget = budgets.reduce((sum, row) => sum + row.used, 0);
   const totalBalance = sumSignedTransactions(state.transactions, () => true);
-  const departmentFundBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "其他");
+  const departmentFundBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "其他" || row.fundSource === "部门预算");
   const laborFundBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "课题劳务费");
   const reserveBalance = sumSignedTransactions(state.transactions, (row) => row.fundSource === "备用金");
   const months = Array.from({ length: 12 }, (_, index) => `2026-${String(index + 1).padStart(2, "0")}`);

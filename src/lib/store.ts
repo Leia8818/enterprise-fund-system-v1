@@ -208,8 +208,17 @@ function normalizeTransaction(row: Transaction): Transaction {
 }
 
 function normalizeFundSource(fundSource: string, businessType: string) {
-  if (fundSource === "课题劳务费" || fundSource === "备用金" || fundSource === "借款" || fundSource === "其他") return fundSource as Transaction["fundSource"];
+  if (
+    fundSource === "部门预算" ||
+    fundSource === "部门课题自筹预算" ||
+    fundSource === "课题劳务费" ||
+    fundSource === "备用金" ||
+    fundSource === "借款" ||
+    fundSource === "其他"
+  ) return fundSource as Transaction["fundSource"];
   if (businessType.includes("借款")) return "借款";
+  if (fundSource.includes("课题自筹")) return "部门课题自筹预算";
+  if (fundSource.includes("部门预算")) return "部门预算";
   if (fundSource.includes("劳务费")) return "课题劳务费";
   if (fundSource.includes("备用金")) return "备用金";
   return "其他";
