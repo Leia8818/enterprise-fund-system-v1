@@ -166,7 +166,7 @@ export default function Home() {
           used: row.used,
           executionRate: row.executionRate,
         })),
-      selfFundBudgets: budgets
+    selfFundBudgets: budgets
         .filter((row) => selfFundBudgetCategories.some((item) => item.category === row.category))
         .map((row) => ({
           id: row.id,
@@ -175,6 +175,7 @@ export default function Home() {
           used: row.used,
           executionRate: row.executionRate,
         })),
+      constructionProjects: buildConstructionProjectRows(store.state),
     };
   }, [store.state]);
 
@@ -517,6 +518,38 @@ function Dashboard({
         </Panel>
       </section>
 
+      <section>
+        <Panel title="施工项目" action={<span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-money">累计使用 / 当前余额</span>}>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
+              <div className="text-xs font-semibold text-slate-500">累计使用金额</div>
+              <div className="mt-2 text-2xl font-extrabold text-risk">{formatCurrency(derived.constructionProjects.reduce((sum, row) => sum + row.used, 0))}</div>
+            </div>
+            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
+              <div className="text-xs font-semibold text-slate-500">施工项目余额</div>
+              <div className="mt-2 text-2xl font-extrabold text-money">{formatCurrency(derived.constructionProjects.reduce((sum, row) => sum + row.balance, 0))}</div>
+            </div>
+            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
+              <div className="text-xs font-semibold text-slate-500">项目数量</div>
+              <div className="mt-2 text-2xl font-extrabold text-ink">{derived.constructionProjects.length}</div>
+            </div>
+          </div>
+          <div className="mt-4">
+            <SimpleTable
+              rows={derived.constructionProjects}
+              columns={[
+                ["project", "项目"],
+                ["income", "收入", (v) => <span className="font-bold text-money">{formatCurrency(Number(v))}</span>],
+                ["used", "累计使用", (v) => <span className="font-bold text-risk">{formatCurrency(Number(v))}</span>],
+                ["returned", "归还", (v) => <span className="font-bold text-money">{formatCurrency(Number(v))}</span>],
+                ["balance", "余额", (v) => <StrongMoney value={Number(v)} tone={Number(v) < 0 ? "risk" : "money"} />],
+                ["latestDate", "最近日期", (v) => formatDate(String(v))],
+              ]}
+            />
+          </div>
+        </Panel>
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-[1.3fr_1fr]">
         <Panel title="最近10条资金流水" action={<button onClick={() => setView("transactions")} className="btn-ghost">查看全部</button>}>
           <SimpleTable
@@ -586,10 +619,11 @@ function TransactionsModule({
   remove: (id: string) => void;
   archiveCompleted: () => void;
 }) {
-  const [filters, setFilters] = useState({ department: "全部", project: "全部", fundSource: "全部", businessType: "全部", status: "全部", month: "", archive: "未归档" });
+  const [filters, setFilters] = useState({ keyword: "", department: "全部", project: "全部", fundSource: "全部", businessType: "全部", status: "全部", month: "", archive: "未归档" });
   const [editing, setEditing] = useState<Transaction | null>(null);
   const rows = state.transactions
-    .filter((row) => includesQuery(row, query))
+    .filter((row) => includesTransactionQuery(row, query))
+    .filter((row) => includesTransactionQuery(row, filters.keyword))
     .filter((row) => filters.archive === "全部" || (filters.archive === "已归档" ? row.archived : !row.archived))
     .filter((row) => filters.department === "全部" || row.department === filters.department)
     .filter((row) => filters.project === "全部" || row.project === filters.project)
@@ -622,6 +656,7 @@ function TransactionsModule({
         ]}
       />
       <FilterBar>
+        <SelectFilter label="搜索" type="text" value={filters.keyword} placeholder="金额/费用名称/备注" onChange={(v) => setFilters({ ...filters, keyword: v })} />
         <SelectFilter label="部门" value={filters.department} options={["全部", ...state.dicts.departments.map((d) => d.name)]} onChange={(v) => setFilters({ ...filters, department: v })} />
         <SelectFilter label="项目" value={filters.project} options={["全部", ...state.dicts.projects.map((p) => p.name)]} onChange={(v) => setFilters({ ...filters, project: v })} />
         <SelectFilter label="资金类别" value={filters.fundSource} options={["全部", ...sourceOptions]} onChange={(v) => setFilters({ ...filters, fundSource: v })} />
@@ -1319,7 +1354,7 @@ function buildDerived() {
         used: row.used,
         executionRate: row.executionRate,
       })),
-    selfFundBudgets: budgets
+      selfFundBudgets: budgets
       .filter((row) => selfFundBudgetCategories.some((item) => item.category === row.category))
       .map((row) => ({
         id: row.id,
@@ -1328,12 +1363,69 @@ function buildDerived() {
         used: row.used,
         executionRate: row.executionRate,
       })),
+    constructionProjects: buildConstructionProjectRows(seedState),
   };
 }
 
 function includesQuery(row: unknown, query: string) {
   if (!query.trim()) return true;
   return JSON.stringify(row).toLowerCase().includes(query.trim().toLowerCase());
+}
+
+function includesTransactionQuery(row: Transaction, query: string) {
+  const keyword = query.trim().toLowerCase();
+  if (!keyword) return true;
+  const signed = transactionSignedAmount(row);
+  const searchText = [
+    JSON.stringify(row),
+    String(row.amount),
+    String(signed),
+    formatCurrency(row.amount),
+    formatSignedCurrency(signed),
+    row.expenseCategory,
+    row.remark,
+    inferTransactionFeeName(row),
+  ].join(" ").toLowerCase();
+  return searchText.includes(keyword);
+}
+
+function inferTransactionFeeName(row: Transaction) {
+  if (row.expenseCategory && row.expenseCategory !== "其他") return row.expenseCategory;
+  const text = `${row.project} ${row.remark}`.replace(/\s+/g, "");
+  if (/办公|文具|耗材|打印|复印|快递/.test(text)) return "办公费";
+  const category = [...departmentBudgetCategories, ...selfFundBudgetCategories].find((item) => text.includes(item.category));
+  return category?.category ?? "";
+}
+
+function buildConstructionProjectRows(state: AppState) {
+  const rows = state.transactions.filter((row) => row.department === "施工项目部");
+  const grouped = new Map<string, Transaction[]>();
+  rows.forEach((row) => {
+    const key = row.project || "未填写项目";
+    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+  });
+  return Array.from(grouped.entries())
+    .map(([project, projectRows]) => {
+      const income = projectRows
+        .filter((row) => row.businessType === "收入")
+        .reduce((sum, row) => sum + row.amount, 0);
+      const returned = projectRows
+        .filter((row) => row.businessType === "归还")
+        .reduce((sum, row) => sum + row.amount, 0);
+      const used = projectRows
+        .filter((row) => row.businessType === "支出")
+        .reduce((sum, row) => sum + row.amount, 0);
+      return {
+        id: `construction-${project}`,
+        project,
+        income,
+        used,
+        returned,
+        balance: income + returned - used,
+        latestDate: [...projectRows].sort((a, b) => b.date.localeCompare(a.date))[0]?.date ?? "",
+      };
+    })
+    .sort((a, b) => b.used - a.used);
 }
 
 const transactionRequiredFields: Array<[keyof Transaction, string]> = [
