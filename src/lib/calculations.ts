@@ -390,7 +390,7 @@ export function projectRows(state: AppState, budgets: BudgetComputed[], cash: Ca
   return state.dicts.projects.map((project) => {
     const projectBudget = budgets.filter((row) => row.project === project.name);
     const budget = projectBudget.reduce((sum, row) => sum + row.amount, 0);
-    const spent = projectBudget.reduce((sum, row) => sum + row.used, 0);
+    const spent = sumTransactions(state.transactions, (row) => row.project === project.name && row.businessType === "支出");
     return {
       id: project.id,
       project: project.name,

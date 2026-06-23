@@ -175,7 +175,6 @@ export default function Home() {
           used: row.used,
           executionRate: row.executionRate,
         })),
-      constructionProjects: buildConstructionProjectRows(store.state),
     };
   }, [store.state]);
 
@@ -514,38 +513,6 @@ function Dashboard({
                 </div>
               </div>
             ))}
-          </div>
-        </Panel>
-      </section>
-
-      <section>
-        <Panel title="施工项目" action={<span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-money">累计使用 / 当前余额</span>}>
-          <div className="grid gap-3 lg:grid-cols-3">
-            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
-              <div className="text-xs font-semibold text-slate-500">累计使用金额</div>
-              <div className="mt-2 text-2xl font-extrabold text-risk">{formatCurrency(derived.constructionProjects.reduce((sum, row) => sum + row.used, 0))}</div>
-            </div>
-            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
-              <div className="text-xs font-semibold text-slate-500">施工项目余额</div>
-              <div className="mt-2 text-2xl font-extrabold text-money">{formatCurrency(derived.constructionProjects.reduce((sum, row) => sum + row.balance, 0))}</div>
-            </div>
-            <div className="rounded-xl border border-line bg-[#f6fbf8] p-4">
-              <div className="text-xs font-semibold text-slate-500">项目数量</div>
-              <div className="mt-2 text-2xl font-extrabold text-ink">{derived.constructionProjects.length}</div>
-            </div>
-          </div>
-          <div className="mt-4">
-            <SimpleTable
-              rows={derived.constructionProjects}
-              columns={[
-                ["project", "项目"],
-                ["income", "收入", (v) => <span className="font-bold text-money">{formatCurrency(Number(v))}</span>],
-                ["used", "累计使用", (v) => <span className="font-bold text-risk">{formatCurrency(Number(v))}</span>],
-                ["returned", "归还", (v) => <span className="font-bold text-money">{formatCurrency(Number(v))}</span>],
-                ["balance", "余额", (v) => <StrongMoney value={Number(v)} tone={Number(v) < 0 ? "risk" : "money"} />],
-                ["latestDate", "最近日期", (v) => formatDate(String(v))],
-              ]}
-            />
           </div>
         </Panel>
       </section>
@@ -1363,7 +1330,6 @@ function buildDerived() {
         used: row.used,
         executionRate: row.executionRate,
       })),
-    constructionProjects: buildConstructionProjectRows(seedState),
   };
 }
 
@@ -1395,37 +1361,6 @@ function inferTransactionFeeName(row: Transaction) {
   if (/办公|文具|耗材|打印|复印|快递/.test(text)) return "办公费";
   const category = [...departmentBudgetCategories, ...selfFundBudgetCategories].find((item) => text.includes(item.category));
   return category?.category ?? "";
-}
-
-function buildConstructionProjectRows(state: AppState) {
-  const rows = state.transactions.filter((row) => row.department === "施工项目部");
-  const grouped = new Map<string, Transaction[]>();
-  rows.forEach((row) => {
-    const key = row.project || "未填写项目";
-    grouped.set(key, [...(grouped.get(key) ?? []), row]);
-  });
-  return Array.from(grouped.entries())
-    .map(([project, projectRows]) => {
-      const income = projectRows
-        .filter((row) => row.businessType === "收入")
-        .reduce((sum, row) => sum + row.amount, 0);
-      const returned = projectRows
-        .filter((row) => row.businessType === "归还")
-        .reduce((sum, row) => sum + row.amount, 0);
-      const used = projectRows
-        .filter((row) => row.businessType === "支出")
-        .reduce((sum, row) => sum + row.amount, 0);
-      return {
-        id: `construction-${project}`,
-        project,
-        income,
-        used,
-        returned,
-        balance: income + returned - used,
-        latestDate: [...projectRows].sort((a, b) => b.date.localeCompare(a.date))[0]?.date ?? "",
-      };
-    })
-    .sort((a, b) => b.used - a.used);
 }
 
 const transactionRequiredFields: Array<[keyof Transaction, string]> = [
