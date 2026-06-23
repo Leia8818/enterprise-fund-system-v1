@@ -72,7 +72,6 @@ export default function LeaderPage() {
       <MobileDecisionOverview
         dashboard={dashboard}
         warnings={warnings}
-        recentTransactions={dashboard.recentTransactions}
         updatedAt={store.cloudUpdatedAt || (hasBusinessData(store.state) ? store.lastSavedAt : "")}
         cloudStatus={store.cloudStatus}
         hasBusinessData={hasBusinessData(store.state)}
@@ -228,14 +227,12 @@ export default function LeaderPage() {
 function MobileDecisionOverview({
   dashboard,
   warnings,
-  recentTransactions,
   updatedAt,
   cloudStatus,
   hasBusinessData,
 }: {
   dashboard: ReturnType<typeof computeDashboard>;
   warnings: Warning[];
-  recentTransactions: Transaction[];
   updatedAt: string;
   cloudStatus: string;
   hasBusinessData: boolean;
@@ -360,36 +357,6 @@ function MobileDecisionOverview({
               </div>
             ))}
             {warnings.length === 0 && <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-700">当前暂无风险预警</div>}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-emerald-100 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-lg font-extrabold text-ink">最近资金动态</h2>
-            <span className="text-xs font-semibold text-slate-500">最近 5 条</span>
-          </div>
-          <div className="space-y-2">
-            {recentTransactions.slice(0, 5).map((row) => {
-              const signed = transactionSignedAmount(row);
-              return (
-                <div key={row.id} className="rounded-2xl border border-line p-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="text-sm font-extrabold text-ink">{row.project || row.department}</div>
-                      <div className="mt-1 text-xs text-slate-500">{formatDate(row.date)} / {row.fundSource} / {row.businessType}</div>
-                    </div>
-                    <div className={signed < 0 ? "shrink-0 text-right text-base font-extrabold text-red-600" : "shrink-0 text-right text-base font-extrabold text-emerald-700"}>
-                      {signed < 0 ? "-" : "+"}{formatCurrency(Math.abs(signed))}
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500">{row.person || "未填写经办人"}</span>
-                    <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">{row.status}</span>
-                  </div>
-                </div>
-              );
-            })}
-            {recentTransactions.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">暂无资金流水</div>}
           </div>
         </section>
 
