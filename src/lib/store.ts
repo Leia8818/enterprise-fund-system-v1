@@ -38,7 +38,10 @@ export function useFundStore(initialState: AppState) {
           setCloudStatus("正在加载云端");
           const cloud = await loadCloudState();
           if (cloud?.state) {
-            nextState = normalizeState(cloud.state, initialState);
+            const cloudState = normalizeState(cloud.state, initialState);
+            if (hasBusinessData(cloudState) || !hasBusinessData(nextState)) {
+              nextState = cloudState;
+            }
             setCloudUpdatedAt(cloud.updated_at);
           }
           setCloudStatus(cloud ? "云端已连接" : "云端暂无数据");
@@ -75,41 +78,16 @@ export function useFundStore(initialState: AppState) {
         setLocalState(initialState);
       }
     }
-    async function loadCloudStateIntoLocal() {
-      if (!isCloudConfigured()) return;
-      try {
-        const cloud = await loadCloudState();
-        if (!cloud?.state) return;
-        const next = normalizeState(cloud.state, initialState);
-        setLocalState(next);
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        setCloudUpdatedAt(cloud.updated_at);
-        setCloudStatus("云端已同步");
-      } catch {
-        setCloudStatus("云端读取失败");
-      }
-    }
 
     function handleStorage(event: StorageEvent) {
       if (event.key === STORAGE_KEY) loadSavedState();
     }
 
-    const handleFocus = () => {
-      void loadCloudStateIntoLocal();
-    };
-    const handleTimer = () => {
-      void loadCloudStateIntoLocal();
-    };
-
     window.addEventListener("storage", handleStorage);
     window.addEventListener(STORAGE_EVENT, loadSavedState);
-    window.addEventListener("focus", handleFocus);
-    const timer = window.setInterval(handleTimer, 30000);
     return () => {
       window.removeEventListener("storage", handleStorage);
       window.removeEventListener(STORAGE_EVENT, loadSavedState);
-      window.removeEventListener("focus", handleFocus);
-      window.clearInterval(timer);
     };
   }, [initialState]);
 
@@ -211,6 +189,10 @@ function normalizeState(next: Partial<AppState>, fallback: AppState): AppState {
       expenseCategories: next.dicts?.expenseCategories?.length ? next.dicts.expenseCategories : fallback.dicts.expenseCategories,
     },
   };
+}
+
+function hasBusinessData(state: AppState) {
+  return state.transactions.length > 0 || state.budgets.length > 0 || state.cashAdvances.length > 0;
 }
 
 function normalizeTransaction(row: Transaction): Transaction {
