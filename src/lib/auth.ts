@@ -1,4 +1,4 @@
-export type LoginRole = "管理端" | "领导查看";
+export type LoginRole = "管理端" | "查看端";
 
 export type LoginSession = {
   userName: string;
@@ -12,7 +12,7 @@ export const PUBLIC_ORIGIN = process.env.NEXT_PUBLIC_PUBLIC_ORIGIN ?? "https://l
 
 const accounts = [
   { userName: "admin", password: "123456", role: "管理端" as const },
-  { userName: "leader", password: "123456", role: "领导查看" as const },
+  { userName: "leader", password: "123456", role: "查看端" as const },
 ];
 
 export function login(userName: string, password: string) {
@@ -32,7 +32,9 @@ export function getSession() {
   const saved = window.localStorage.getItem(AUTH_SESSION_KEY);
   if (!saved) return null;
   try {
-    return JSON.parse(saved) as LoginSession;
+    const session = JSON.parse(saved) as LoginSession;
+    if (session.role !== "管理端") return { ...session, role: "查看端" as const };
+    return session;
   } catch {
     window.localStorage.removeItem(AUTH_SESSION_KEY);
     return null;

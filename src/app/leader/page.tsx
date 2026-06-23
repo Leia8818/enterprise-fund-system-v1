@@ -13,17 +13,6 @@ import {
   UserRound,
   WalletCards,
 } from "lucide-react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { seedState } from "@/data/seed";
 import { BASE_PATH } from "@/lib/auth";
 import {
@@ -55,6 +44,8 @@ export default function LeaderPage() {
     .map((row) => ({
       id: row.id,
       category: row.category,
+      used: row.used,
+      budget: row.amount,
       executionRate: row.executionRate,
     }));
   const selfFundBudgets = budgets
@@ -62,6 +53,8 @@ export default function LeaderPage() {
     .map((row) => ({
       id: row.id,
       category: row.category,
+      used: row.used,
+      budget: row.amount,
       executionRate: row.executionRate,
     }));
 
@@ -142,15 +135,7 @@ export default function LeaderPage() {
               <h2 className="font-bold text-ink">部门各项费用预算执行率</h2>
               <span className="text-xs text-slate-500">按当前资金流水自动统计</span>
             </div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={expenseBudgets}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="category" fontSize={12} />
-                <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v}%`} fontSize={12} />
-                <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
-                <Bar dataKey="executionRate" fill="#059669" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <BudgetProgressRows rows={expenseBudgets} />
           </div>
 
           <div className="card p-5">
@@ -184,31 +169,13 @@ export default function LeaderPage() {
             <h2 className="font-bold text-ink">课题自筹预算执行率</h2>
             <span className="text-xs text-slate-500">会员费、保险费、办公费、房租、交通费、物流运输</span>
           </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={selfFundBudgets}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="category" fontSize={12} />
-              <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} tickFormatter={(v) => `${v}%`} fontSize={12} />
-              <Tooltip formatter={(v) => `${Number(v).toFixed(1)}%`} />
-              <Bar dataKey="executionRate" fill="#0f766e" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <BudgetProgressRows rows={selfFundBudgets} />
         </section>
 
         <section className="grid grid-cols-[0.9fr_1.1fr] gap-5">
           <div className="card p-5">
             <h2 className="mb-4 font-bold text-ink">月度资金趋势</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={dashboard.monthlyTrend}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" fontSize={12} />
-                <YAxis fontSize={12} tickFormatter={(v) => `${Number(v) / 10000}万`} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                <Line type="monotone" dataKey="收入" stroke="#059669" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="支出" stroke="#dc2626" strokeWidth={2} dot={false} />
-                <Line type="monotone" dataKey="劳务费" stroke="#16a34a" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
+            <MonthlyTrendList rows={dashboard.monthlyTrend} />
           </div>
 
           <div className="card overflow-hidden">
@@ -300,7 +267,7 @@ function MobileDecisionOverview({
         </div>
         <div className="relative mx-auto max-w-[300px] pt-12 text-center">
           <div className="mx-auto inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-emerald-50 ring-1 ring-white/15">
-            {hasBusinessData ? "资金决策概览" : "暂无云端数据"}
+            {hasBusinessData ? "资金概览" : "暂无云端数据"}
           </div>
           <h1 className="mt-3 text-[27px] font-extrabold leading-tight tracking-wide">
             智能装备研究院
@@ -442,6 +409,55 @@ function MobileDecisionOverview({
 
 function hasBusinessData(state: { transactions: unknown[]; budgets: unknown[]; cashAdvances: unknown[] }) {
   return state.transactions.length > 0 || state.budgets.length > 0 || state.cashAdvances.length > 0;
+}
+
+function BudgetProgressRows({
+  rows,
+}: {
+  rows: Array<{ id: string; category: string; used: number; budget: number; executionRate: number }>;
+}) {
+  return (
+    <div className="space-y-3">
+      {rows.map((row) => (
+        <div key={row.id} className="rounded-xl border border-line bg-white px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="font-bold text-ink">{row.category}</div>
+            <div className="text-sm font-extrabold text-emerald-700">{row.executionRate.toFixed(1)}%</div>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-emerald-50">
+            <div className="h-2 rounded-full bg-emerald-700" style={{ width: `${Math.min(Math.max(row.executionRate, 0), 100)}%` }} />
+          </div>
+          <div className="mt-2 flex justify-between text-xs font-semibold text-slate-500">
+            <span>已使用 {formatCurrency(row.used)}</span>
+            <span>预算 {formatCurrency(row.budget)}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MonthlyTrendList({ rows }: { rows: Array<{ month: string; 收入: number; 支出: number }> }) {
+  return (
+    <div className="space-y-2">
+      {rows.filter((row) => row.收入 > 0 || row.支出 > 0).slice(-6).map((row) => (
+        <div key={row.month} className="grid grid-cols-[52px_1fr_1fr] items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 text-sm">
+          <div className="font-extrabold text-ink">{row.month}月</div>
+          <div>
+            <div className="text-xs font-semibold text-slate-500">收入</div>
+            <div className="font-extrabold text-emerald-700">{formatCurrency(row.收入)}</div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-slate-500">支出</div>
+            <div className="font-extrabold text-red-600">{formatCurrency(row.支出)}</div>
+          </div>
+        </div>
+      ))}
+      {rows.every((row) => row.收入 === 0 && row.支出 === 0) && (
+        <div className="rounded-xl bg-slate-50 p-5 text-center text-sm font-semibold text-slate-500">暂无月度收支数据</div>
+      )}
+    </div>
+  );
 }
 
 function SmallStat({ label, value, icon: Icon }: { label: string; value: string; icon: React.ElementType }) {

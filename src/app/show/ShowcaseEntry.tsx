@@ -77,7 +77,7 @@ export default function ShowcaseEntry() {
               <QrCode className="h-7 w-7" />
             </div>
             <h2 className="mt-4 text-3xl font-extrabold text-[#064536]">手机扫码进入</h2>
-            <p className="mt-2 text-sm font-semibold text-slate-500">资金决策概览</p>
+            <p className="mt-2 text-sm font-semibold text-slate-500">资金概览</p>
 
             <div className="mx-auto mt-7 h-72 w-72 rounded-[28px] bg-white p-5 shadow-inner ring-1 ring-line sm:h-80 sm:w-80">
               {entryUrl && <QrSvg value={entryUrl} />}

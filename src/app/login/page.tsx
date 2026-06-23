@@ -45,7 +45,7 @@ export default function LoginPage() {
       setMessage("账号或密码不正确");
       return;
     }
-    window.location.href = session.role === "领导查看" ? withBasePath("/leader") : withBasePath(nextPath || "/admin");
+    window.location.href = session.role === "管理端" ? withBasePath(nextPath || "/admin") : withBasePath("/leader");
   }
 
   const isLocalhost = entryUrl.includes("127.0.0.1") || entryUrl.includes("localhost");
@@ -89,7 +89,7 @@ export default function LoginPage() {
                 <ArrowRight className="h-5 w-5" />
               </button>
               <div className="rounded-xl bg-emerald-50 px-4 py-3 text-xs font-semibold leading-5 text-emerald-800">
-                管理端：admin / 123456　领导查看：leader / 123456
+                管理端：admin / 123456　查看端：leader / 123456
               </div>
             </div>
           </div>
@@ -101,7 +101,7 @@ export default function LoginPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-extrabold">手机扫码</h2>
-                <p className="mt-1 text-sm text-slate-500">扫码后直接进入决策概览</p>
+                <p className="mt-1 text-sm text-slate-500">扫码后直接进入查看页面</p>
               </div>
             </div>
 
