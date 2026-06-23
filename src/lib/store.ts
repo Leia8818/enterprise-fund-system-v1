@@ -12,7 +12,13 @@ type CollectionMap = {
 };
 
 const STORAGE_KEY = "mgrass-fund-system-v1";
+const STORAGE_META_KEY = "mgrass-fund-system-v1-meta";
 const STORAGE_EVENT = "mgrass-fund-system-updated";
+
+type LocalMeta = {
+  savedAt?: string;
+  cloudUpdatedAt?: string;
+};
 
 export function useFundStore(initialState: AppState) {
   const [state, setLocalState] = useState<AppState>(initialState);
@@ -25,6 +31,7 @@ export function useFundStore(initialState: AppState) {
     let cancelled = false;
     async function loadInitialState() {
       let nextState = initialState;
+      const localMeta = readLocalMeta();
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
@@ -39,10 +46,15 @@ export function useFundStore(initialState: AppState) {
           const cloud = await loadCloudState();
           if (cloud?.state) {
             const cloudState = normalizeState(cloud.state, initialState);
-            if (hasBusinessData(cloudState) || !hasBusinessData(nextState)) {
+            const localSavedAt = localMeta.savedAt ?? "";
+            const shouldUseCloud =
+              !hasBusinessData(nextState) ||
+              (hasBusinessData(cloudState) && Boolean(localSavedAt) && isAfter(cloud.updated_at, localSavedAt));
+            if (shouldUseCloud) {
               nextState = cloudState;
             }
             setCloudUpdatedAt(cloud.updated_at);
+            writeLocalMeta({ ...localMeta, cloudUpdatedAt: cloud.updated_at });
           }
           setCloudStatus(cloud ? "云端已连接" : "云端暂无数据");
         } catch {
@@ -64,7 +76,9 @@ export function useFundStore(initialState: AppState) {
   useEffect(() => {
     if (!loading) {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      setLastSavedAt(new Date().toISOString());
+      const savedAt = new Date().toISOString();
+      writeLocalMeta({ ...readLocalMeta(), savedAt });
+      setLastSavedAt(savedAt);
     }
   }, [loading, state]);
 
@@ -92,9 +106,11 @@ export function useFundStore(initialState: AppState) {
   }, [initialState]);
 
   function commit(next: AppState) {
+    const savedAt = new Date().toISOString();
     setLocalState(next);
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    setLastSavedAt(new Date().toISOString());
+    writeLocalMeta({ ...readLocalMeta(), savedAt });
+    setLastSavedAt(savedAt);
     window.dispatchEvent(new Event(STORAGE_EVENT));
   }
 
@@ -141,7 +157,9 @@ export function useFundStore(initialState: AppState) {
     try {
       setCloudStatus("正在保存云端");
       const cloud = await saveCloudState(state);
-      setCloudUpdatedAt(cloud?.updated_at ?? new Date().toISOString());
+      const updatedAt = cloud?.updated_at ?? new Date().toISOString();
+      setCloudUpdatedAt(updatedAt);
+      writeLocalMeta({ ...readLocalMeta(), cloudUpdatedAt: updatedAt });
       setCloudStatus("云端已保存");
       return true;
     } catch {
@@ -193,6 +211,22 @@ function normalizeState(next: Partial<AppState>, fallback: AppState): AppState {
 
 function hasBusinessData(state: AppState) {
   return state.transactions.length > 0 || state.budgets.length > 0 || state.cashAdvances.length > 0;
+}
+
+function readLocalMeta(): LocalMeta {
+  try {
+    return JSON.parse(window.localStorage.getItem(STORAGE_META_KEY) ?? "{}") as LocalMeta;
+  } catch {
+    return {};
+  }
+}
+
+function writeLocalMeta(meta: LocalMeta) {
+  window.localStorage.setItem(STORAGE_META_KEY, JSON.stringify(meta));
+}
+
+function isAfter(a: string, b: string) {
+  return Date.parse(a) > Date.parse(b);
 }
 
 function normalizeTransaction(row: Transaction): Transaction {

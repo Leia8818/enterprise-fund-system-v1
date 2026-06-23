@@ -611,7 +611,6 @@ function TransactionsModule({
       actions={
         <div className="flex gap-2">
           <button className="btn-ghost" onClick={archiveCompleted} disabled={completedCount === 0}>归档已完成（{completedCount}）</button>
-          <button className="btn-primary" onClick={() => setEditing(emptyTransaction(state))}><Plus className="h-4 w-4" />新增流水</button>
         </div>
       }
     >
