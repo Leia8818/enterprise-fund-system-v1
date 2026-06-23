@@ -586,7 +586,8 @@ function TransactionsModule({
   remove: (id: string) => void;
   archiveCompleted: () => void;
 }) {
-  const [filters, setFilters] = useState({ keyword: "", department: "全部", project: "全部", fundSource: "全部", businessType: "全部", status: "全部", month: "", archive: "未归档" });
+  const defaultFilters = { keyword: "", department: "全部", project: "全部", fundSource: "全部", businessType: "全部", status: "全部", month: "", archive: "未归档" };
+  const [filters, setFilters] = useState(defaultFilters);
   const [editing, setEditing] = useState<Transaction | null>(null);
   const rows = state.transactions
     .filter((row) => includesTransactionQuery(row, query))
@@ -631,7 +632,11 @@ function TransactionsModule({
         <SelectFilter label="状态" value={filters.status} options={["全部", ...statusOptions]} onChange={(v) => setFilters({ ...filters, status: v })} />
         <SelectFilter label="月份" type="month" value={filters.month} onChange={(v) => setFilters({ ...filters, month: v })} />
         <SelectFilter label="归档" value={filters.archive} options={["未归档", "已归档", "全部"]} onChange={(v) => setFilters({ ...filters, archive: v })} />
-        <div className={cn("ml-auto rounded-lg px-4 py-2 text-sm font-semibold", total < 0 ? "bg-red-50 text-risk" : "bg-emerald-50 text-money")}>筛选合计：{formatSignedCurrency(total)}</div>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button className="btn-ghost h-10" onClick={() => setFilters(defaultFilters)}>清空筛选</button>
+          <button className="btn-primary h-10" onClick={() => setEditing(emptyTransaction(state))}><Plus className="h-4 w-4" />新增流水</button>
+        </div>
+        <div className={cn("rounded-lg px-4 py-2 text-sm font-semibold", total < 0 ? "bg-red-50 text-risk" : "bg-emerald-50 text-money")}>筛选合计：{formatSignedCurrency(total)}</div>
       </FilterBar>
       <DataTable
         rows={rows}
